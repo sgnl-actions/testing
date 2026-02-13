@@ -82,10 +82,10 @@ describe('sgnl-test-init CLI', () => {
       expect(parsed.scenarios).toHaveLength(1);
     });
 
-    it('scenarios.yaml skips address from params', () => {
+    it('scenarios.yaml includes address in params', () => {
       const content = readFileSync(join(dir, 'tests', 'scenarios.yaml'), 'utf-8');
       const parsed = yaml.load(content);
-      expect(parsed.action.params).not.toHaveProperty('address');
+      expect(parsed.action.params.address).toBe('test-address');
     });
 
     it('fixture file contains HTTP response boilerplate', () => {
@@ -150,7 +150,7 @@ describe('sgnl-test-init CLI', () => {
   });
 
   describe('with multi-input metadata', () => {
-    it('generates params for all non-address inputs', () => {
+    it('generates params for all inputs', () => {
       const dir = createTempDir();
       writeMetadata(dir, [
         'name: okta-create-user',
@@ -179,7 +179,7 @@ describe('sgnl-test-init CLI', () => {
       expect(parsed.action.params.firstName).toBe('Test');
       expect(parsed.action.params.lastName).toBe('User');
       expect(parsed.action.params.count).toBe(42);
-      expect(parsed.action.params).not.toHaveProperty('address');
+      expect(parsed.action.params.address).toBe('test-address');
     });
   });
 });

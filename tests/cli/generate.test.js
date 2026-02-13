@@ -111,11 +111,11 @@ describe('generateScenariosYaml', () => {
     expect(parsed.scenarios).toBeDefined();
   });
 
-  it('populates action.params from metadata inputs, skipping address', () => {
+  it('populates action.params from all metadata inputs', () => {
     const result = generateScenariosYaml(simpleMetadata);
     const parsed = yaml.load(result);
     expect(parsed.action.params.userId).toBe('test-user-123');
-    expect(parsed.action.params).not.toHaveProperty('address');
+    expect(parsed.action.params.address).toBe('test-address');
   });
 
   it('includes default secrets with BEARER_AUTH_TOKEN', () => {
@@ -124,10 +124,10 @@ describe('generateScenariosYaml', () => {
     expect(parsed.action.context.secrets.BEARER_AUTH_TOKEN).toBe('test-token-123');
   });
 
-  it('includes default environment with ADDRESS', () => {
+  it('includes empty environment object', () => {
     const result = generateScenariosYaml(simpleMetadata);
     const parsed = yaml.load(result);
-    expect(parsed.action.context.environment.ADDRESS).toBe('https://api.example.com');
+    expect(parsed.action.context.environment).toEqual({});
   });
 
   it('generates one scenario with TODO markers', () => {
@@ -168,8 +168,7 @@ describe('generateScenariosYaml', () => {
       inputs: {
         email: { type: 'text', required: true },
         count: { type: 'number', required: false },
-        enabled: { type: 'boolean', required: false },
-        address: { type: 'text', required: false }
+        enabled: { type: 'boolean', required: false }
       }
     };
     const result = generateScenariosYaml(metadata);
@@ -177,7 +176,6 @@ describe('generateScenariosYaml', () => {
     expect(parsed.action.params.email).toBe('user@example.com');
     expect(parsed.action.params.count).toBe(42);
     expect(parsed.action.params.enabled).toBe(true);
-    expect(parsed.action.params).not.toHaveProperty('address');
   });
 
   it('handles metadata with no inputs', () => {
@@ -194,6 +192,6 @@ describe('generateScenariosYaml', () => {
     };
     const result = generateScenariosYaml(metadata);
     const parsed = yaml.load(result);
-    expect(parsed.action.params).toEqual({});
+    expect(parsed.action.params.address).toBe('test-address');
   });
 });

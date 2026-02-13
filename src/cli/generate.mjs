@@ -64,7 +64,6 @@ export function generateFixture() {
 export function generateScenariosYaml(metadata) {
   const params = {};
   for (const [name, def] of Object.entries(metadata.inputs ?? {})) {
-    if (name === 'address') continue;
     params[name] = inputPlaceholder(name, def.type);
   }
 
@@ -75,9 +74,7 @@ export function generateScenariosYaml(metadata) {
         secrets: {
           BEARER_AUTH_TOKEN: 'test-token-123'
         },
-        environment: {
-          ADDRESS: 'https://api.example.com'
-        }
+        environment: {}
       }
     },
     scenarios: [
