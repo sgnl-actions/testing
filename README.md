@@ -51,10 +51,12 @@ In your action's `tests/script.test.js`:
 import { runScenarios } from '@sgnl-actions/testing';
 
 runScenarios({
-  script: '../src/script.mjs',
-  scenarios: './scenarios.yaml'
+  script: './src/script.mjs',
+  scenarios: './tests/scenarios.yaml'
 });
 ```
+
+All paths are relative to the project root (where `npm test` runs from).
 
 ### 4. Fill in the TODOs and run
 
@@ -103,7 +105,7 @@ Next steps:
      - Create additional fixtures for error scenarios
   3. Update tests/script.test.js to use scenario-based testing:
      import { runScenarios } from '@sgnl-actions/testing';
-     runScenarios({ script: '../src/script.mjs', scenarios: './scenarios.yaml' });
+     runScenarios({ script: './src/script.mjs', scenarios: './tests/scenarios.yaml' });
   4. Run: npm test
 ```
 
@@ -248,8 +250,8 @@ These verify that your action throws on each error status. To disable:
 
 ```javascript
 runScenarios({
-  script: '../src/script.mjs',
-  scenarios: './scenarios.yaml',
+  script: './src/script.mjs',
+  scenarios: './tests/scenarios.yaml',
   includeCommon: false
 });
 ```

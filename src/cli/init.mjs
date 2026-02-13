@@ -64,6 +64,6 @@ Next steps:
      - Create additional fixtures for error scenarios
   3. Update tests/script.test.js to use scenario-based testing:
      import { runScenarios } from '@sgnl-actions/testing';
-     runScenarios({ script: '../src/script.mjs', scenarios: './scenarios.yaml' });
+     runScenarios({ script: './src/script.mjs', scenarios: './tests/scenarios.yaml' });
   4. Run: npm test
 `);
