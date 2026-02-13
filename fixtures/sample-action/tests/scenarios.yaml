@@ -1,0 +1,55 @@
+action:
+  params:
+    userId: usr123
+    domain: dev-123.okta.com
+  context:
+    secrets:
+      API_TOKEN: test-token
+    environment:
+      LOG_LEVEL: debug
+
+scenarios:
+  - name: suspends active user
+    request:
+      method: POST
+      url: https://dev-123.okta.com/api/v1/users/usr123/lifecycle/suspend
+      headers:
+        Authorization: "SSWS test-token"
+    fixture: fixtures/200-suspended.http
+    invoke:
+      returns:
+        userId: usr123
+        suspended: true
+        status: SUSPENDED
+
+  - name: rate limited
+    request:
+      method: POST
+      url: https://dev-123.okta.com/api/v1/users/usr123/lifecycle/suspend
+    fixture: fixtures/429-rate-limit.http
+    invoke:
+      throws: "API call exceeded rate limit"
+    error:
+      returns:
+        status: retry_requested
+
+  - name: handles 401 unauthorized
+    request:
+      method: POST
+      url: https://dev-123.okta.com/api/v1/users/usr123/lifecycle/suspend
+    fixture: fixtures/401-unauthorized.http
+    invoke:
+      throws: "Invalid token provided"
+    error:
+      throws: "Invalid token provided"
+
+  - name: handles 500 internal server error
+    request:
+      method: POST
+      url: https://dev-123.okta.com/api/v1/users/usr123/lifecycle/suspend
+    fixture: fixtures/500-server-error.http
+    invoke:
+      throws: "Internal Server Error"
+    error:
+      returns:
+        status: retry_requested

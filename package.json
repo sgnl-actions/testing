@@ -1,0 +1,38 @@
+{
+  "name": "@sgnl-actions/testing",
+  "version": "1.0.0",
+  "description": "Declarative scenario-based testing framework for SGNL actions",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./parse-fixture": "./src/parse-fixture.mjs",
+    "./parse-scenarios": "./src/parse-scenarios.mjs",
+    "./setup-nock": "./src/setup-nock.mjs",
+    "./assertions": "./src/assertions.mjs"
+  },
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
+  },
+  "keywords": [
+    "sgnl",
+    "testing",
+    "actions",
+    "scenarios",
+    "nock"
+  ],
+  "author": "SGNL Engineering",
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "nock": "^14.0.0"
+  },
+  "peerDependencies": {
+    "jest": ">=29.0.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5"
+  }
+}

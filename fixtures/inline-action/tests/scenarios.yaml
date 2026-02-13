@@ -1,0 +1,25 @@
+action:
+  params:
+    userId: usr123
+  context:
+    secrets:
+      API_TOKEN: test-token
+
+scenarios:
+  - name: fetches user successfully
+    request:
+      method: GET
+      url: https://api.example.com/users/usr123
+    fixture: fixtures/200-user.http
+    invoke:
+      returns:
+        userId: usr123
+        name: Test User
+
+  - name: user not found
+    request:
+      method: GET
+      url: https://api.example.com/users/usr123
+    fixture: fixtures/404-not-found.http
+    invoke:
+      throws: "404"

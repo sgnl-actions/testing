@@ -1,0 +1,6 @@
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+Retry-After: 30
+X-Rate-Limit-Remaining: 0
+
+{"errorCode":"E0000047","errorSummary":"API call exceeded rate limit: too many requests"}

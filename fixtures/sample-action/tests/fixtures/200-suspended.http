@@ -1,0 +1,5 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Rate-Limit-Remaining: 599
+
+{"id":"usr123","status":"SUSPENDED","statusChanged":"2024-01-15T10:30:00.000Z"}

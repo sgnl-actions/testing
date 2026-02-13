@@ -1,0 +1,24 @@
+action:
+  params:
+    userId: usr123
+    domain: dev-123.okta.com
+  context:
+    secrets:
+      API_TOKEN: test-token
+
+scenarios:
+  - name: suspends and verifies user
+    steps:
+      - request:
+          method: POST
+          url: https://dev-123.okta.com/api/v1/users/usr123/lifecycle/suspend
+        fixture: fixtures/200-suspend-ok.http
+      - request:
+          method: GET
+          url: https://dev-123.okta.com/api/v1/users/usr123
+        fixture: fixtures/200-user-suspended.http
+    invoke:
+      returns:
+        userId: usr123
+        suspended: true
+        status: SUSPENDED
