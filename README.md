@@ -205,12 +205,6 @@ import { assertInvokeReturns, assertInvokeThrows, assertErrorReturns, assertErro
 ## Installation
 
 ```bash
-npm install --save-dev @sgnl-actions/testing
-```
-
-Or from GitHub:
-
-```bash
 npm install --save-dev github:sgnl-actions/testing
 ```
 
