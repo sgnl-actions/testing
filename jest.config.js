@@ -8,6 +8,7 @@ export default {
   moduleFileExtensions: ['js', 'mjs', 'json'],
   collectCoverageFrom: [
     'src/**/*.mjs',
-    '!src/index.mjs'
+    '!src/index.mjs',
+    '!src/cli/init.mjs'
   ]
 };

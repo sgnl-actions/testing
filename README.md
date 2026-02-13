@@ -2,7 +2,48 @@
 
 Declarative scenario-based testing framework for SGNL actions. Define API scenarios in YAML with raw HTTP fixture files — the framework handles nock setup, invocation, and assertion automatically.
 
+## Why This Framework?
+
+Every SGNL action follows the same pattern: validate inputs, call an external API, handle errors, return a result. Testing these actions means writing the same boilerplate over and over — set up nock, build params/context, call `invoke()`, check the return value, repeat for every error code.
+
+This framework eliminates that repetition. Instead of writing imperative test code, you declare scenarios in YAML:
+
+- **What the action receives** — params, secrets, environment variables
+- **What HTTP requests it should make** — method, URL, headers
+- **What the API returns** — raw HTTP response fixtures captured with `curl -i`
+- **What the action should do** — return specific values or throw specific errors
+
+The framework wires everything together: it parses the YAML, loads fixtures, sets up nock interceptors, imports your script, runs each scenario, and asserts the results. One YAML file replaces hundreds of lines of test code.
+
+### Benefits
+
+- **Zero test boilerplate** — a 3-line test file drives all your scenarios
+- **Fixtures are real HTTP responses** — capture them with `curl -i`, paste them in
+- **Common error scenarios built in** — 401, 403, 429, 500, 502, 503, 504, and network errors auto-generated
+- **Readable test definitions** — YAML scenarios serve as documentation for action behavior
+- **Consistent across all actions** — every action repo tests the same way
+
 ## Quick Start
+
+### 1. Install
+
+```bash
+npm install --save-dev github:sgnl-actions/testing
+```
+
+### 2. Scaffold test files
+
+From your action repo root (where `metadata.yaml` lives):
+
+```bash
+npx sgnl-test-init
+```
+
+This reads your `metadata.yaml` and creates:
+- `tests/scenarios.yaml` — starter scenario with params populated from your inputs
+- `tests/fixtures/200-success.http` — boilerplate HTTP response fixture
+
+### 3. Wire up the test runner
 
 In your action's `tests/script.test.js`:
 
@@ -15,7 +56,76 @@ runScenarios({
 });
 ```
 
+### 4. Fill in the TODOs and run
+
+Edit the generated files to match your action's actual API calls and expected returns, then:
+
+```bash
+npm test
+```
+
 That's it. The framework reads the YAML, loads fixtures, sets up nock, imports your script, runs every scenario, and asserts results. Jest discovers `script.test.js` as usual.
+
+## Scaffolding CLI (`npx sgnl-test-init`)
+
+Run from an action repo root (where `metadata.yaml` lives):
+
+```bash
+npx sgnl-test-init
+```
+
+The CLI:
+1. Reads `metadata.yaml` to get the action name and input parameter names/types
+2. Creates `tests/fixtures/` directory
+3. Creates `tests/fixtures/200-success.http` with boilerplate HTTP response
+4. Creates `tests/scenarios.yaml` with:
+   - `action.params` populated from metadata inputs (with smart placeholders)
+   - Default `context.secrets` and `context.environment`
+   - One starter scenario with TODO markers
+5. Skips any file that already exists (prints a warning)
+6. Prints next-steps instructions
+
+Example output:
+
+```
+Initialized scenario tests for okta-suspend-user
+
+  Created: tests/scenarios.yaml
+  Created: tests/fixtures/200-success.http
+
+Next steps:
+  1. Edit tests/scenarios.yaml:
+     - Set the request method and URL to match your action's API call
+     - Set invoke.returns to match your action's actual return values
+     - Add more scenarios for error cases (429, 401, etc.)
+  2. Edit tests/fixtures/200-success.http:
+     - Replace the body with an actual API response (use: curl -i <url>)
+     - Create additional fixtures for error scenarios
+  3. Update tests/script.test.js to use scenario-based testing:
+     import { runScenarios } from '@sgnl-actions/testing';
+     runScenarios({ script: '../src/script.mjs', scenarios: './scenarios.yaml' });
+  4. Run: npm test
+```
+
+### Smart Placeholders
+
+The CLI generates sensible placeholder values based on input names:
+
+| Input Name | Placeholder |
+|------------|-------------|
+| `userId` | `test-user-123` |
+| `email`, `login` | `user@example.com` |
+| `firstName` | `Test` |
+| `lastName` | `User` |
+| `domain` | `dev-123.example.com` |
+| `groupId` | `test-group-123` |
+| `accountId` | `test-account-123` |
+| `roleId` | `test-role-123` |
+| (other text) | `test-{name}` |
+| (number) | `42` |
+| (boolean) | `true` |
+
+The `address` input is always skipped from params (it maps to the `ADDRESS` environment variable).
 
 ## Scenario YAML Format
 
@@ -207,6 +317,8 @@ import { assertInvokeReturns, assertInvokeThrows, assertErrorReturns, assertErro
 ```bash
 npm install --save-dev github:sgnl-actions/testing
 ```
+
+After installation, you'll see a reminder to run `npx sgnl-test-init` to scaffold your test files.
 
 ## Requirements
 

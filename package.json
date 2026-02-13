@@ -4,6 +4,9 @@
   "description": "Declarative scenario-based testing framework for SGNL actions",
   "type": "module",
   "main": "src/index.mjs",
+  "bin": {
+    "sgnl-test-init": "./src/cli/init.mjs"
+  },
   "exports": {
     ".": "./src/index.mjs",
     "./parse-fixture": "./src/parse-fixture.mjs",
@@ -14,7 +17,8 @@
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "postinstall": "echo '\\n  Run npx sgnl-test-init to scaffold scenario tests.\\n'"
   },
   "keywords": [
     "sgnl",
