@@ -125,7 +125,7 @@ The CLI generates sensible placeholder values based on input names:
 | (number) | `42` |
 | (boolean) | `true` |
 
-The `address` input is always skipped from params since actions receive the base URL via `context.environment.ADDRESS` instead.
+The `address` input is skipped from params because `getBaseURL()` falls back to `context.environment.ADDRESS`, which the CLI already sets in the generated scaffold. You can add it to params if your tests need to override the environment value.
 
 ## Scenario YAML Format
 
