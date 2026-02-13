@@ -1,6 +1,6 @@
 # @sgnl-actions/testing
 
-Declarative scenario-based testing framework for SGNL actions. Define API scenarios in YAML with raw HTTP fixture files — the framework handles nock setup, invocation, and assertion automatically.
+Declarative scenario-based testing framework for SGNL actions. Define API scenarios in YAML with raw HTTP fixture files — the framework handles [nock](https://github.com/nock/nock) (HTTP mocking) setup, invocation, and assertion automatically.
 
 ## Why This Framework?
 
@@ -324,4 +324,4 @@ After installation, you'll see a reminder to run `npx sgnl-test-init` to scaffol
 
 - Node.js 22+
 - Jest 29+ (peer dependency)
-- Actions must use `fetch()` for HTTP calls (nock 14 intercepts native fetch)
+- Actions must use `fetch()` for HTTP calls (nock intercepts native fetch to mock responses)
