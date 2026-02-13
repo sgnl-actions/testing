@@ -1,6 +1,6 @@
 # @sgnl-actions/testing
 
-Declarative scenario-based testing framework for SGNL actions. Define API scenarios in YAML with raw HTTP fixture files — the framework handles nock setup, invocation, and assertion automatically.
+Declarative scenario-based testing framework for SGNL actions. Define API scenarios in YAML with raw HTTP fixture files — the framework handles mock setup, invocation, and assertion automatically.
 
 ## Quick Start
 
