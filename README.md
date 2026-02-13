@@ -125,7 +125,7 @@ The CLI generates sensible placeholder values based on input names:
 | (number) | `42` |
 | (boolean) | `true` |
 
-The `address` input is always skipped from params (it maps to the `ADDRESS` environment variable).
+The `address` input is always skipped from params since actions receive the base URL via `context.environment.ADDRESS` instead.
 
 ## Scenario YAML Format
 
