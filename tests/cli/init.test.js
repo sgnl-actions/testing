@@ -103,9 +103,11 @@ describe('sgnl-test-init CLI', () => {
       expect(output).toContain('Created: tests/fixtures/200-success.http');
     });
 
-    it('prints next-steps instructions', () => {
+    it('prints next-steps instructions with project-root-relative paths', () => {
       expect(output).toContain('Next steps');
       expect(output).toContain('runScenarios');
+      expect(output).toContain('./src/script.mjs');
+      expect(output).toContain('./tests/scenarios.yaml');
       expect(output).toContain('npm test');
     });
   });
