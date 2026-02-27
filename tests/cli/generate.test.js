@@ -1,7 +1,6 @@
 import yaml from 'js-yaml';
 import {
   inputPlaceholder,
-  generateFixture,
   generateScenariosYaml
 } from '../../src/cli/generate.mjs';
 
@@ -71,29 +70,6 @@ describe('inputPlaceholder', () => {
   });
 });
 
-describe('generateFixture', () => {
-  it('returns a valid HTTP response string', () => {
-    const fixture = generateFixture();
-    expect(fixture).toContain('HTTP/1.1 200 OK');
-    expect(fixture).toContain('Content-Type: application/json');
-    expect(fixture).toContain('{"TODO": "replace with actual API response body"}');
-  });
-
-  it('has blank line separating headers from body', () => {
-    const fixture = generateFixture();
-    const lines = fixture.split('\n');
-    const blankIndex = lines.indexOf('');
-    expect(blankIndex).toBeGreaterThan(0);
-    expect(lines[blankIndex - 1]).toBe('Content-Type: application/json');
-    expect(lines[blankIndex + 1]).toBe('{"TODO": "replace with actual API response body"}');
-  });
-
-  it('ends with a trailing newline', () => {
-    const fixture = generateFixture();
-    expect(fixture.endsWith('\n')).toBe(true);
-  });
-});
-
 describe('generateScenariosYaml', () => {
   const simpleMetadata = {
     name: 'okta-suspend-user',
@@ -137,29 +113,32 @@ describe('generateScenariosYaml', () => {
     expect(parsed.scenarios[0].name).toContain('TODO');
   });
 
-  it('scenario has request with TODO url', () => {
+  it('scenario has record: true for recording workflow', () => {
     const result = generateScenariosYaml(simpleMetadata);
     const parsed = yaml.load(result);
-    const scenario = parsed.scenarios[0];
-    expect(scenario.request.method).toBe('POST');
-    expect(scenario.request.url).toContain('TODO');
+    expect(parsed.scenarios[0].record).toBe(true);
   });
 
-  it('scenario has fixture path', () => {
+  it('scenario does not have request or fixture (filled by recorder)', () => {
     const result = generateScenariosYaml(simpleMetadata);
     const parsed = yaml.load(result);
-    expect(parsed.scenarios[0].fixture).toBe('fixtures/200-success.http');
+    expect(parsed.scenarios[0].request).toBeUndefined();
+    expect(parsed.scenarios[0].fixture).toBeUndefined();
+    expect(parsed.scenarios[0].invoke).toBeUndefined();
   });
 
-  it('scenario has invoke.returns with TODO status', () => {
+  it('includes YAML comments with recording instructions', () => {
+    const result = generateScenariosYaml(simpleMetadata);
+    expect(result).toContain('record: true');
+    expect(result).toContain('npx sgnl-test-record');
+  });
+
+  it('includes default crypto mock for signJWT', () => {
     const result = generateScenariosYaml(simpleMetadata);
     const parsed = yaml.load(result);
-    expect(parsed.scenarios[0].invoke.returns.status).toBe('success');
-  });
-
-  it('includes YAML comments with TODO instructions', () => {
-    const result = generateScenariosYaml(simpleMetadata);
-    expect(result).toContain('# TODO');
+    expect(parsed.action.context.crypto).toEqual({
+      signJWT: { returns: 'mock.jwt.token' }
+    });
   });
 
   it('handles metadata with multiple inputs of different types', () => {

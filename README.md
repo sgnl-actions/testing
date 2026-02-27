@@ -40,7 +40,7 @@ npx sgnl-test-init
 ```
 
 This reads your `metadata.yaml` and creates:
-- `tests/scenarios.yaml` — starter scenario with params populated from your inputs
+- `tests/scenarios.yaml` — starter scenario with params populated from your inputs and `record: true` for recording
 - `tests/fixtures/200-success.http` — boilerplate HTTP response fixture
 
 ### 3. Wire up the test runner
@@ -58,9 +58,27 @@ runScenarios({
 
 All paths are relative to the project root (where `npm test` runs from).
 
-### 4. Fill in the TODOs and run
+### 4. Record or fill in scenarios, then run
 
-Edit the generated files to match your action's actual API calls and expected returns, then:
+**Option A — Record from real systems (recommended):**
+
+```bash
+# Fill in real secrets in tests/scenarios.yaml action.context.secrets
+vim tests/scenarios.yaml
+
+# Record scenarios marked with record: true
+npx sgnl-test-record
+
+# Redact secrets before committing
+vim tests/scenarios.yaml
+
+# Run tests
+npm test
+```
+
+**Option B — Write scenarios manually:**
+
+Edit the generated files to match your action's actual API calls and expected returns (remove `record: true` and fill in `request`, `fixture`, `invoke`), then:
 
 ```bash
 npm test
@@ -83,7 +101,7 @@ The CLI:
 4. Creates `tests/scenarios.yaml` with:
    - `action.params` populated from metadata inputs (with smart placeholders)
    - Default `context.secrets` and `context.environment`
-   - One starter scenario with TODO markers
+   - One starter scenario with `record: true` for the recording workflow
 5. Skips any file that already exists (prints a warning)
 6. Prints next-steps instructions
 
@@ -96,17 +114,14 @@ Initialized scenario tests for okta-suspend-user
   Created: tests/fixtures/200-success.http
 
 Next steps:
-  1. Edit tests/scenarios.yaml:
-     - Set the request method and URL to match your action's API call
-     - Set invoke.returns to match your action's actual return values
-     - Add more scenarios for error cases (429, 401, etc.)
-  2. Edit tests/fixtures/200-success.http:
-     - Replace the body with an actual API response (use: curl -i <url>)
-     - Create additional fixtures for error scenarios
-  3. Update tests/script.test.js to use scenario-based testing:
-     import { runScenarios } from '@sgnl-actions/testing';
-     runScenarios({ script: './src/script.mjs', scenarios: './tests/scenarios.yaml' });
-  4. Run: npm test
+  Option A — Record scenarios from real systems (recommended):
+    1. Edit tests/scenarios.yaml — fill in real secrets in action.context.secrets
+    2. npx sgnl-test-record
+    3. Review generated scenarios and fixtures, redact secrets before committing
+    4. Run: npm test
+
+  Option B — Write scenarios manually:
+    ...
 ```
 
 ### Smart Placeholders
@@ -198,6 +213,44 @@ For actions that make multiple HTTP requests:
         userId: usr123
         status: SUSPENDED
 ```
+
+### Mocking `context.crypto`
+
+CAEP actions use `context.crypto.signJWT(payload, options)` — an in-process function injected by the CAEP Hub at runtime. In tests, you can mock crypto functions by declaring them in the `context.crypto` section with a `returns` value:
+
+```yaml
+action:
+  context:
+    secrets:
+      BEARER_AUTH_TOKEN: test-token
+    environment:
+      ADDRESS: https://receiver.example.com/events
+    crypto:
+      signJWT:
+        returns: "mock.jwt.token"
+```
+
+The framework converts `{ returns: "mock.jwt.token" }` into `async () => "mock.jwt.token"`, so your action can call `await context.crypto.signJWT(payload, options)` and receive the mock value.
+
+Per-scenario overrides work the same way:
+
+```yaml
+scenarios:
+  - name: uses different signing key
+    context:
+      crypto:
+        signJWT:
+          returns: "different.jwt.token"
+    request:
+      method: POST
+      url: https://receiver.example.com/events
+    fixture: fixtures/200-accepted.http
+    invoke:
+      returns:
+        jwt: "different.jwt.token"
+```
+
+If no `crypto` section is declared, `context.crypto` is not set — existing actions without crypto are unaffected.
 
 ### Per-scenario overrides
 
@@ -319,6 +372,219 @@ npm install --save-dev github:sgnl-actions/testing
 ```
 
 After installation, you'll see a reminder to run `npx sgnl-test-init` to scaffold your test files.
+
+## Recording CLI (`npx sgnl-test-record`)
+
+Manually writing scenarios and fixtures is tedious — you have to figure out what HTTP calls your action makes, what the responses look like, and what the action returns. The recording CLI automates this by running your action against real systems, capturing all HTTP traffic, and generating the scenarios + fixtures for you.
+
+### When to use it
+
+- **New actions** — bootstrap your entire test suite from a single recording session
+- **Actions with multiple HTTP calls** — e.g., CAEP actions that call a crypto service and then a receiver
+- **Adding new scenarios** — add `record: true` to new scenarios and run the recorder
+
+### How it works
+
+The recorder reads `tests/scenarios.yaml`, finds scenarios marked with `record: true`, runs them against real systems, fills in the recorded data (`request`, `fixture`, `invoke`), and removes the `record: true` flag. Everything stays in one file.
+
+```yaml
+action:
+  params:
+    subject: test-subject
+  context:
+    secrets:
+      BEARER_AUTH_TOKEN: real-token   # you fill in real secrets
+    environment:
+      ADDRESS: https://real-receiver.example.com/events
+    crypto:
+      signJWT:
+        returns: mock.jwt.token
+
+scenarios:
+  - name: successfully transmits event
+    record: true                      # recorder will fill this in
+
+  - name: rejects invalid subject JSON
+    record: true
+    params:
+      subject: not valid json         # per-scenario override
+
+  - name: handles 401                 # already recorded, no flag
+    request: ...
+    fixture: ...
+    invoke:
+      throws: "Unauthorized"
+```
+
+### Recording workflow
+
+```bash
+# 1. Add record: true to scenarios you want to record
+# 2. Fill in real secrets in action.context.secrets
+vim tests/scenarios.yaml
+
+# 3. Run the recorder
+npx sgnl-test-record
+
+# 4. Redact secrets before committing
+vim tests/scenarios.yaml
+
+# 5. Run tests
+npm test
+```
+
+The recorder will:
+
+1. Read `tests/scenarios.yaml` and dynamically import your script
+2. For each scenario with `record: true`:
+   - Merge action-level params/context with scenario overrides
+   - Call `script.invoke(params, context)` against **real** systems
+   - Capture all HTTP requests/responses via nock's recorder
+   - If invoke throws and the script has an `error()` handler, call that too
+3. Write `tests/fixtures/*.http` — one fixture file per HTTP response captured
+4. Update scenarios in-place: fill in `request`/`fixture`/`invoke`, remove `record: true`
+5. Write the updated `scenarios.yaml` back — secrets are **not** auto-redacted (that's your job)
+
+Example output:
+
+```
+  Recording: successfully transmits event
+    Result: returned {"status":"success"}
+    HTTP calls captured: 2
+
+  Recording: rejects invalid subject JSON
+    Result: threw "Unexpected token 'n'"
+    HTTP calls captured: 0
+
+  Scenarios recorded: 2
+  Fixtures created: 2
+    fixtures/successfully-transmits-event-step1-crypto-sgnl-svc.http
+    fixtures/successfully-transmits-event-step2-receiver-example-com.http
+
+Next steps:
+  1. Review tests/scenarios.yaml:
+     - Verify the recorded request URLs and methods are correct
+     - Check invoke.returns / invoke.throws match expectations
+     - Redact any real secrets in action.context.secrets and URLs before committing
+  2. Review tests/fixtures/*.http:
+     - Remove any sensitive data from response headers and bodies
+  3. Run: npm test
+```
+
+### Generated scenario formats
+
+**Single HTTP call** — shorthand format:
+
+```yaml
+- name: successfully transmits event
+  request:
+    method: POST
+    url: https://receiver.example.com/events
+  fixture: fixtures/successfully-transmits-event-step1-receiver-example-com.http
+  invoke:
+    returns:
+      status: success
+```
+
+**Multiple HTTP calls** — steps format:
+
+```yaml
+- name: successfully transmits event
+  steps:
+    - request:
+        method: POST
+        url: http://crypto-service.internal/sign
+      fixture: fixtures/successfully-transmits-event-step1-crypto-service-internal.http
+    - request:
+        method: POST
+        url: https://receiver.example.com/events
+      fixture: fixtures/successfully-transmits-event-step2-receiver-example-com.http
+  invoke:
+    returns:
+      status: success
+```
+
+**Zero HTTP calls** (threw before making any fetch) — empty steps:
+
+```yaml
+- name: rejects invalid subject JSON
+  steps: []
+  invoke:
+    throws: "Unexpected token 'n', \"not valid json\" is not valid JSON"
+```
+
+### Secret handling
+
+- Secrets are **not** auto-redacted — you are responsible for redacting `action.context.secrets` values before committing
+- Secrets may also appear in fixture files (e.g., Authorization headers) or in URLs — always review generated files before committing
+- The recorder preserves the `action` section as-is, so your real secrets remain in `scenarios.yaml` until you manually redact them
+
+### Fixture file format
+
+Generated fixtures follow the same `.http` format used by the testing framework:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Request-Id: abc123
+
+{"status":"accepted","id":"evt-456"}
+```
+
+Fixture filenames encode the scenario, step number, and target hostname:
+
+```
+{scenario-slug}-step{N}-{hostname-slug}.http
+```
+
+For example: `successfully-transmits-event-step1-crypto-sgnl-svc.http`
+
+### Workflow example
+
+Here's the recommended workflow for a new action:
+
+```bash
+# 1. Write your action script
+vim src/script.mjs
+
+# 2. Scaffold test files (generates scenarios.yaml with record: true + fixture)
+npx sgnl-test-init
+
+# 3. Fill in real secrets in scenarios.yaml
+vim tests/scenarios.yaml            # replace placeholder secrets and URLs
+
+# 4. Record scenarios against real systems
+npx sgnl-test-record
+
+# 5. Redact secrets and review generated files
+vim tests/scenarios.yaml            # replace real secrets with test values
+vim tests/fixtures/*.http           # remove sensitive headers/data
+
+# 6. Wire up the test runner (if not already done)
+cat > tests/script.test.js << 'EOF'
+import { runScenarios } from '@sgnl-actions/testing';
+runScenarios({ script: './src/script.mjs', scenarios: './tests/scenarios.yaml' });
+EOF
+
+# 7. Run tests — should pass with the recorded fixtures
+npm test
+
+# 8. Commit
+git add tests/
+git commit -m "Add scenario tests via sgnl-test-record"
+```
+
+### Troubleshooting
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| `tests/scenarios.yaml not found` | Missing or wrong location | Run `npx sgnl-test-init` to generate one |
+| `no scenarios have "record: true"` | No scenarios flagged for recording | Add `record: true` to scenarios you want to record |
+| `script module must export an invoke() function` | Wrong script path or missing export | Check script path; ensure `export async function invoke(...)` |
+| `0 HTTP calls captured` for a scenario that should make calls | Action threw before reaching `fetch()` | Check error message; fix params or context |
+| Tests fail after recording | Fixture responses don't match expectations | Review `invoke.returns` / `invoke.throws`; update if needed |
+| Secrets visible in fixtures | HTTP headers or URLs contain tokens | Manually edit fixture files to remove sensitive data |
+| `has "record: true" but has not been recorded yet` | Running tests before recording | Run `npx sgnl-test-record` first, or remove `record: true` and fill in manually |
 
 ## Requirements
 

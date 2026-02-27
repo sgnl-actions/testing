@@ -147,6 +147,9 @@ function validateScenario(scenario, index) {
   if (!scenario.name) {
     throw new Error(`Scenario at index ${index} is missing required field "name"`);
   }
+  if (scenario.record === true && !scenario.invoke) {
+    throw new Error(`Scenario "${scenario.name}" has "record: true" but has not been recorded yet. Run "npx sgnl-test-record" to record it.`);
+  }
   if (!scenario.invoke) {
     throw new Error(`Scenario "${scenario.name}" is missing required field "invoke"`);
   }

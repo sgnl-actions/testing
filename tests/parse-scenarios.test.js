@@ -267,6 +267,22 @@ scenarios:
     expect(() => parseScenariosString(yaml)).toThrow('invoke');
   });
 
+  test('throws helpful error for record: true scenario without invoke', () => {
+    const yaml = `
+action:
+  params: {}
+  context:
+    secrets: {}
+
+scenarios:
+  - name: unrecorded scenario
+    record: true
+`;
+
+    expect(() => parseScenariosString(yaml)).toThrow('has "record: true" but has not been recorded yet');
+    expect(() => parseScenariosString(yaml)).toThrow('npx sgnl-test-record');
+  });
+
   test('handles request headers in scenario', () => {
     const yaml = `
 action:
