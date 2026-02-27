@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.mjs",
   "bin": {
-    "sgnl-test-init": "./src/cli/init.mjs"
+    "sgnl-test-init": "./src/cli/init.mjs",
+    "sgnl-test-record": "./src/cli/record.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",

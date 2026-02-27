@@ -70,10 +70,6 @@ describe('sgnl-test-init CLI', () => {
       expect(existsSync(join(dir, 'tests', 'scenarios.yaml'))).toBe(true);
     });
 
-    it('creates tests/fixtures/200-success.http', () => {
-      expect(existsSync(join(dir, 'tests', 'fixtures', '200-success.http'))).toBe(true);
-    });
-
     it('scenarios.yaml is valid YAML with expected structure', () => {
       const content = readFileSync(join(dir, 'tests', 'scenarios.yaml'), 'utf-8');
       const parsed = yaml.load(content);
@@ -88,27 +84,27 @@ describe('sgnl-test-init CLI', () => {
       expect(parsed.action.params.address).toBe('test-address');
     });
 
-    it('fixture file contains HTTP response boilerplate', () => {
-      const content = readFileSync(join(dir, 'tests', 'fixtures', '200-success.http'), 'utf-8');
-      expect(content).toContain('HTTP/1.1 200 OK');
-      expect(content).toContain('TODO');
+    it('scenarios.yaml scenario has record: true', () => {
+      const content = readFileSync(join(dir, 'tests', 'scenarios.yaml'), 'utf-8');
+      const parsed = yaml.load(content);
+      expect(parsed.scenarios[0].record).toBe(true);
     });
 
     it('prints action name in output', () => {
       expect(output).toContain('okta-suspend-user');
     });
 
-    it('prints Created lines for both files', () => {
+    it('prints Created line for scenarios.yaml', () => {
       expect(output).toContain('Created: tests/scenarios.yaml');
-      expect(output).toContain('Created: tests/fixtures/200-success.http');
     });
 
-    it('prints next-steps instructions with project-root-relative paths', () => {
+    it('prints next-steps instructions mentioning record: true workflow', () => {
       expect(output).toContain('Next steps');
       expect(output).toContain('runScenarios');
       expect(output).toContain('./src/script.mjs');
       expect(output).toContain('./tests/scenarios.yaml');
       expect(output).toContain('npm test');
+      expect(output).toContain('sgnl-test-record');
     });
   });
 
@@ -126,10 +122,9 @@ describe('sgnl-test-init CLI', () => {
         '    required: true'
       ].join('\n'));
 
-      // Pre-create the files
-      mkdirSync(join(dir, 'tests', 'fixtures'), { recursive: true });
+      // Pre-create the file
+      mkdirSync(join(dir, 'tests'), { recursive: true });
       writeFileSync(join(dir, 'tests', 'scenarios.yaml'), 'existing content');
-      writeFileSync(join(dir, 'tests', 'fixtures', '200-success.http'), 'existing fixture');
 
       output = runCli(dir);
     });
@@ -139,15 +134,9 @@ describe('sgnl-test-init CLI', () => {
       expect(content).toBe('existing content');
     });
 
-    it('does not overwrite existing fixture', () => {
-      const content = readFileSync(join(dir, 'tests', 'fixtures', '200-success.http'), 'utf-8');
-      expect(content).toBe('existing fixture');
-    });
-
-    it('prints skip warnings', () => {
+    it('prints skip warning', () => {
       expect(output).toContain('Skipped');
       expect(output).toContain('scenarios.yaml');
-      expect(output).toContain('200-success.http');
     });
   });
 

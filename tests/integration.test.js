@@ -1,3 +1,4 @@
+
 import { jest } from '@jest/globals';
 import { runScenarios } from '../src/index.mjs';
 import { join } from 'path';
