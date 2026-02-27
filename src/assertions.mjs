@@ -1,4 +1,17 @@
 /**
+ * Deep-compare two values. Uses JSON serialisation for objects/arrays.
+ */
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+  if (typeof a === 'object') {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return false;
+}
+
+/**
  * Assert that calling invoke returns an object containing all expected key/value pairs.
  *
  * @param {Function} invokeFn - Async function to call (bound with params, context)
@@ -9,7 +22,7 @@ export async function assertInvokeReturns(invokeFn, expected) {
   const result = await invokeFn();
 
   for (const [key, value] of Object.entries(expected)) {
-    if (result[key] !== value) {
+    if (!deepEqual(result[key], value)) {
       throw new Error(
         `Expected invoke result.${key} to be ${JSON.stringify(value)}, got ${JSON.stringify(result[key])}`
       );
@@ -58,7 +71,7 @@ export async function assertErrorReturns(errorFn, expected) {
   const result = await errorFn();
 
   for (const [key, value] of Object.entries(expected)) {
-    if (result[key] !== value) {
+    if (!deepEqual(result[key], value)) {
       throw new Error(
         `Expected error handler result.${key} to be ${JSON.stringify(value)}, got ${JSON.stringify(result[key])}`
       );

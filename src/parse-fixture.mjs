@@ -20,7 +20,10 @@ export function parseFixtureString(raw) {
   // Split on first blank line to separate headers from body
   const separatorIndex = normalised.indexOf('\n\n');
   const headerSection = separatorIndex === -1 ? normalised : normalised.slice(0, separatorIndex);
-  const body = separatorIndex === -1 ? '' : normalised.slice(separatorIndex + 2);
+  const rawBody = separatorIndex === -1 ? '' : normalised.slice(separatorIndex + 2);
+  // Trim trailing newline that comes from file endings — a fixture with no body
+  // (e.g. 202 Accepted with content-length: 0) should produce body === ''
+  const body = rawBody.replace(/\n$/, '');
 
   const headerLines = headerSection.split('\n');
   const statusLine = headerLines[0];
