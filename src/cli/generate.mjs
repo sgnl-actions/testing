@@ -43,14 +43,33 @@ export function inputPlaceholder(name, type) {
 const AUTH_PRESETS = {
   bearer: {
     secrets: { BEARER_AUTH_TOKEN: 'test-token-123' },
+    environment: {},
     crypto: { signJWT: { returns: 'mock.jwt.token' } }
   },
   basic: {
     secrets: { BASIC_USERNAME: 'test-access-key', BASIC_PASSWORD: 'test-secret-key' },
+    environment: {},
+    crypto: null
+  },
+  oauth2_authorization_code: {
+    secrets: { OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN: 'test-access-token' },
+    environment: {},
+    crypto: null
+  },
+  oauth2_client_credentials: {
+    secrets: { OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET: 'test-client-secret' },
+    environment: {
+      OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL: 'https://example.com/oauth/token',
+      OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID: 'test-client-id',
+      OAUTH2_CLIENT_CREDENTIALS_SCOPE: '',
+      OAUTH2_CLIENT_CREDENTIALS_AUDIENCE: '',
+      OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE: 'InHeader'
+    },
     crypto: null
   },
   none: {
     secrets: {},
+    environment: {},
     crypto: null
   }
 };
@@ -76,7 +95,7 @@ export function generateScenariosYaml(metadata, options = {}) {
 
   const context = {
     secrets: preset.secrets,
-    environment: {}
+    environment: preset.environment || {}
   };
   if (preset.crypto) {
     context.crypto = preset.crypto;
