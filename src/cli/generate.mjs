@@ -40,30 +40,52 @@ export function inputPlaceholder(name, type) {
   return factory(name);
 }
 
+const AUTH_PRESETS = {
+  bearer: {
+    secrets: { BEARER_AUTH_TOKEN: 'test-token-123' },
+    crypto: { signJWT: { returns: 'mock.jwt.token' } }
+  },
+  basic: {
+    secrets: { BASIC_USERNAME: 'test-access-key', BASIC_PASSWORD: 'test-secret-key' },
+    crypto: null
+  },
+  none: {
+    secrets: {},
+    crypto: null
+  }
+};
+
 /**
  * Generate a scenarios.yaml string from parsed metadata.
  *
  * @param {{ name: string, inputs: Object }} metadata
+ * @param {{ auth?: string }} [options]
  * @returns {string} YAML content with TODO comments
  */
-export function generateScenariosYaml(metadata) {
+export function generateScenariosYaml(metadata, options = {}) {
+  const authType = options.auth || 'bearer';
+  const preset = AUTH_PRESETS[authType];
+  if (!preset) {
+    throw new Error(`Unknown auth type "${authType}". Valid types: ${Object.keys(AUTH_PRESETS).join(', ')}`);
+  }
+
   const params = {};
   for (const [name, def] of Object.entries(metadata.inputs ?? {})) {
     params[name] = inputPlaceholder(name, def.type);
   }
 
+  const context = {
+    secrets: preset.secrets,
+    environment: {}
+  };
+  if (preset.crypto) {
+    context.crypto = preset.crypto;
+  }
+
   const doc = {
     action: {
       params,
-      context: {
-        secrets: {
-          BEARER_AUTH_TOKEN: 'test-token-123'
-        },
-        environment: {},
-        crypto: {
-          signJWT: { returns: 'mock.jwt.token' }
-        }
-      }
+      context
     },
     scenarios: [
       {

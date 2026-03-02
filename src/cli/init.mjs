@@ -5,6 +5,16 @@ import { join } from 'path';
 import yaml from 'js-yaml';
 import { generateScenariosYaml } from './generate.mjs';
 
+// Parse CLI arguments
+const args = process.argv.slice(2);
+let authType;
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--auth' && args[i + 1]) {
+    authType = args[i + 1];
+    i++;
+  }
+}
+
 const cwd = process.cwd();
 const metadataPath = join(cwd, 'metadata.yaml');
 
@@ -18,7 +28,7 @@ const raw = readFileSync(metadataPath, 'utf-8');
 const doc = yaml.load(raw);
 const metadata = { name: doc.name, inputs: doc.inputs ?? {} };
 
-const scenariosContent = generateScenariosYaml(metadata);
+const scenariosContent = generateScenariosYaml(metadata, { auth: authType });
 
 const scenariosPath = join(cwd, 'tests', 'scenarios.yaml');
 
