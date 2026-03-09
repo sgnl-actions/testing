@@ -153,6 +153,7 @@ export function runScenarios(options) {
 export { parseFixture, parseFixtureString } from './parse-fixture.mjs';
 export { parseScenarios, parseScenariosString, COMMON_SCENARIOS } from './parse-scenarios.mjs';
 export { setupNock, cleanupNock } from './setup-nock.mjs';
+export { parseLDAPFixture } from './setup-ldap.mjs';
 export {
   assertInvokeReturns,
   assertInvokeThrows,

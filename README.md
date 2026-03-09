@@ -18,7 +18,7 @@ The framework wires everything together: it parses the YAML, loads fixtures, set
 ### Benefits
 
 - **Zero test boilerplate** — a 3-line test file drives all your scenarios
-- **Fixtures are real HTTP responses** — capture them with `curl -i`, paste them in
+- **Fixtures are real responses** — capture HTTP with `curl -i`, LDAP with `ldapsearch`/`ldapmodify`
 - **Common error scenarios built in** — 401, 403, 429, 500, 502, 503, 504, and network errors auto-generated
 - **Readable test definitions** — YAML scenarios serve as documentation for action behavior
 - **Consistent across all actions** — every action repo tests the same way
@@ -40,14 +40,52 @@ npx sgnl-test-init
 ```
 
 This reads your `metadata.yaml` and creates:
+
+**For HTTP actions (AAD, etc.):**
 - `tests/scenarios.yaml` — starter scenario with params populated from your inputs
-- `tests/fixtures/200-success.http` — boilerplate HTTP response fixture
+- `tests/fixtures/200-success.http` — boilerplate HTTP response fixture (capture real responses with `curl -i`)
+
+**For LDAP actions (AD, etc.):**
+- `tests/scenarios.yaml` — starter LDAP scenario with bind/search/modify/unbind steps
+- `tests/fixtures/200-bind-success.ldap` — LDAP bind operation fixture
+- `tests/fixtures/200-search-success.ldap` — LDAP search operation fixture
+- `tests/fixtures/200-modify-success.ldap` — LDAP modify operation fixture
+- `tests/fixtures/200-unbind-success.ldap` — LDAP unbind operation fixture
+
+The tool automatically detects whether your action is HTTP or LDAP-based by checking if the action name starts with `ad-` or if the description contains "LDAP".
 
 ### 3. Wire up the test runner
 
-In your action's `tests/script.test.js`:
+**For HTTP actions** in your action's `tests/script.test.js`:
 
 ```javascript
+import { runScenarios } from '@sgnl-actions/testing';
+
+runScenarios({
+  script: './src/script.mjs',
+  scenarios: './tests/scenarios.yaml'
+});
+```
+
+**For LDAP actions** in your action's `tests/script.test.js`:
+
+```javascript
+import { jest } from '@jest/globals';
+
+// Mock ldapts module before importing
+jest.unstable_mockModule('ldapts', () => ({
+  Client: jest.fn(),
+  Change: jest.fn(),
+  Attribute: jest.fn()
+}));
+
+const { runLDAPScenarios } = await import('@sgnl-actions/testing/ldap-scenarios');
+
+runLDAPScenarios({
+  script: './src/script.mjs',
+  scenarios: './tests/scenarios.yaml'
+});
+```
 import { runScenarios } from '@sgnl-actions/testing';
 
 runScenarios({
