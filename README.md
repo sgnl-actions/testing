@@ -271,6 +271,111 @@ X-Rate-Limit-Remaining: 599
 
 Place fixtures in `tests/fixtures/` next to your `scenarios.yaml`.
 
+## LDAP Fixture File Format (.ldap)
+
+LDAP fixtures use YAML format to define LDAP operation results, capturable with `ldapsearch`, `ldapmodify`, etc.:
+
+```yaml
+# tests/fixtures/bind-success.ldap
+operation: "bind"
+result:
+  code: 0
+  message: "Success"
+```
+
+```yaml
+# tests/fixtures/search-user-found.ldap
+operation: "search"
+result:
+  code: 0
+  message: "Success"
+  entries:
+    - dn: "CN=testuser,OU=Users,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+      attributes:
+        cn: "testuser"
+        distinguishedName: "CN=testuser,OU=Users,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+        objectClass: ["top", "person", "user"]
+        memberOf: ["CN=ExistingGroup,OU=Groups,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"]
+```
+
+```yaml
+# tests/fixtures/modify-success.ldap
+operation: "modify"
+result:
+  code: 0
+  message: "Success"
+```
+
+```yaml
+# tests/fixtures/bind-error.ldap
+operation: "bind"
+result:
+  code: 49
+  message: "Invalid credentials"
+```
+
+Place LDAP fixtures in `tests/fixtures/` next to your `scenarios.yaml`.
+
+## LDAP Scenario YAML Format
+
+LDAP scenarios define a sequence of LDAP operations (bind, search, modify, unbind):
+
+```yaml
+action:
+  params:
+    userDN: "CN=testuser,OU=Users,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+    groupDN: "CN=TestGroup,OU=Groups,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+  context:
+    secrets:
+      LDAP_USERNAME: "admin@adaptertest.sgnl.ai"
+      LDAP_PASSWORD: "test-password"
+    environment:
+      LDAP_URL: "ldap://adaptertest.sgnl.ai:389"
+
+scenarios:
+  - name: successfully add user to group
+    steps:
+      - operation: bind
+        fixture: fixtures/bind-success.ldap
+      - operation: search
+        fixture: fixtures/search-user-found.ldap
+      - operation: modify
+        fixture: fixtures/modify-success.ldap
+      - operation: unbind
+        fixture: fixtures/unbind-success.ldap
+    invoke:
+      returns:
+        userDN: "CN=testuser,OU=Users,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+        groupDN: "CN=TestGroup,OU=Groups,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+        success: true
+
+  - name: user not found
+    steps:
+      - operation: bind
+        fixture: fixtures/bind-success.ldap
+      - operation: search
+        fixture: fixtures/search-user-not-found.ldap
+      - operation: unbind
+        fixture: fixtures/unbind-success.ldap
+    invoke:
+      throws: "User not found"
+    error:
+      returns:
+        userDN: "CN=testuser,OU=Users,OU=adaptertest,DC=adaptertest,DC=sgnl,DC=ai"
+        error: "User not found"
+```
+
+### LDAP Operation Types
+
+| Operation | Purpose | Typical Fixtures |
+|-----------|---------|------------------|
+| `bind` | Authenticate with LDAP server | `bind-success.ldap`, `bind-error.ldap` |
+| `search` | Find LDAP entries | `search-user-found.ldap`, `search-user-not-found.ldap` |
+| `modify` | Update LDAP entries | `modify-success.ldap`, `modify-insufficient-permissions.ldap` |
+| `add` | Create LDAP entries | `add-success.ldap`, `add-already-exists.ldap` |
+| `delete` | Remove LDAP entries | `delete-success.ldap`, `delete-not-found.ldap` |
+| `unbind` | Close LDAP connection | `unbind-success.ldap` |
+
 ## Common Scenarios
 
 By default, the framework auto-generates scenarios for common HTTP errors using your first scenario's request as a template:
@@ -343,11 +448,19 @@ Main entry point. Call at the top level of a `describe` block.
 
 For advanced usage, individual modules are available:
 
+**HTTP Testing:**
 ```javascript
 import { parseFixture, parseFixtureString } from '@sgnl-actions/testing/parse-fixture';
 import { parseScenarios, parseScenariosString, COMMON_SCENARIOS } from '@sgnl-actions/testing/parse-scenarios';
 import { setupNock, cleanupNock } from '@sgnl-actions/testing/setup-nock';
 import { assertInvokeReturns, assertInvokeThrows, assertErrorReturns, assertErrorThrows } from '@sgnl-actions/testing/assertions';
+```
+
+**LDAP Testing:**
+```javascript
+import { parseLDAPFixture, parseLDAPFixtureString } from '@sgnl-actions/testing/parse-ldap-fixture';
+import { parseLDAPScenarios, isLDAPScenario, resolveLDAPStepFixtures, cleanupLDAPMocks } from '@sgnl-actions/testing/setup-ldap';
+import { runLDAPScenarios } from '@sgnl-actions/testing/ldap-scenarios';
 ```
 
 ## Installation

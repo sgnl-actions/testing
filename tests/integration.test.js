@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { runScenarios } from '../src/index.mjs';
+import { runLDAPScenarios } from '../src/ldap-scenarios.mjs';
 import { join } from 'path';
 
 const fixturesDir = join(import.meta.dirname, '..', 'fixtures');
@@ -60,6 +61,16 @@ describe('Direct module object', () => {
   runScenarios({
     script: mockScript,
     scenarios: join(fixturesDir, 'inline-action', 'tests', 'scenarios.yaml'),
+    includeCommon: false,
+    callerDir: '/'
+  });
+});
+
+// ---- LDAP Action ----
+describe('LDAP Action (LDAP scenarios)', () => {
+  runLDAPScenarios({
+    script: join(fixturesDir, 'ldap-action', 'src', 'script.mjs'),
+    scenarios: join(fixturesDir, 'ldap-action', 'tests', 'scenarios.yaml'),
     includeCommon: false,
     callerDir: '/'
   });

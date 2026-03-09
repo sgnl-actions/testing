@@ -3,6 +3,29 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 /**
+ * Parse LDAP scenarios from YAML file (separate from HTTP scenarios parsing)
+ */
+export function parseLDAPScenarios(scenariosPath, options = {}) {
+  const { includeCommon = true } = options;
+  const content = readFileSync(scenariosPath, 'utf8');
+  const data = parse(content);
+
+  if (!data.scenarios || !Array.isArray(data.scenarios)) {
+    throw new Error('scenarios.yaml must have a "scenarios" array');
+  }
+
+  // Filter scenarios that have LDAP steps
+  const ldapScenarios = data.scenarios.filter(scenario => 
+    scenario.steps && scenario.steps.some(step => step.ldap)
+  );
+
+  return {
+    action: data.action || {},
+    scenarios: ldapScenarios
+  };
+}
+
+/**
  * Parse LDAP fixture file (.ldap format)
  * Expected format:
  * # LDAP operation comment
@@ -29,7 +52,7 @@ export function parseLDAPFixture(fixturePath, scenariosDir) {
  * Check if scenario steps contain LDAP operations
  */
 export function isLDAPScenario(steps) {
-  return steps && steps.some(step => step.ldap);
+  return Boolean(steps && steps.some(step => step.ldap));
 }
 
 /**
@@ -61,5 +84,8 @@ export function resolveLDAPStepFixtures(steps, scenariosDir) {
  * Clean up LDAP mocks
  */
 export function cleanupLDAPMocks() {
-  jest.clearAllMocks();
+  // Only clear mocks if jest is available (i.e., running in test environment)
+  if (typeof global !== 'undefined' && global.jest) {
+    global.jest.clearAllMocks();
+  }
 }

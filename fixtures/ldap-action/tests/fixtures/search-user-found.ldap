@@ -1,0 +1,14 @@
+# LDAP search success - find user
+operation: search
+result: success
+code: 0
+message: "Search successful"
+searchEntries:
+  - dn: "CN=John Doe,OU=Users,DC=corp,DC=example,DC=com"
+    attributes:
+      distinguishedName: "CN=John Doe,OU=Users,DC=corp,DC=example,DC=com"
+      sAMAccountName: "john.doe"
+      mail: "john.doe@example.com"
+      memberOf:
+        - "CN=Developers,OU=Groups,DC=corp,DC=example,DC=com"
+        - "CN=All Users,OU=Groups,DC=corp,DC=example,DC=com"

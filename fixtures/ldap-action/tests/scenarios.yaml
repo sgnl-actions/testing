@@ -1,0 +1,79 @@
+action:
+  params:
+    userPrincipalName: john.doe@example.com
+    groupDN: "CN=Developers,OU=Groups,DC=corp,DC=example,DC=com"
+  context:
+    secrets:
+      LDAP_BIND_USER: "CN=Service,OU=ServiceAccounts,DC=corp,DC=example,DC=com"
+      LDAP_BIND_PASSWORD: "service-password"
+    environment:
+      LDAP_URL: "ldap://dc.corp.example.com:389"
+      LDAP_BASE_DN: "DC=corp,DC=example,DC=com"
+
+scenarios:
+  - name: successfully add user to group
+    steps:
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+      - ldap:
+          operation: search
+          base: "OU=Users,DC=corp,DC=example,DC=com"
+          filter: "(mail=john.doe@example.com)"
+        fixture: fixtures/search-user-found.ldap
+      - ldap:
+          operation: modify
+          dn: "CN=Developers,OU=Groups,DC=corp,DC=example,DC=com"
+        fixture: fixtures/modify-success.ldap
+      - ldap:
+          operation: unbind
+        fixture: fixtures/unbind-success.ldap
+    invoke:
+      returns:
+        status: "success"
+        userDN: "CN=John Doe,OU=Users,DC=corp,DC=example,DC=com"
+        groupDN: "CN=Developers,OU=Groups,DC=corp,DC=example,DC=com"
+
+  - name: user not found
+    steps:
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+      - ldap:
+          operation: search
+          base: "OU=Users,DC=corp,DC=example,DC=com"
+          filter: "(mail=nonexistent@example.com)"
+        fixture: fixtures/search-no-results.ldap
+      - ldap:
+          operation: unbind
+        fixture: fixtures/unbind-success.ldap
+    invoke:
+      throws: "User not found"
+
+  - name: authentication failure
+    steps:
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-error.ldap
+    invoke:
+      throws: "Invalid credentials"
+
+  - name: idempotent - user already in group
+    steps:
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+      - ldap:
+          operation: search
+          base: "OU=Users,DC=corp,DC=example,DC=com"
+          filter: "(mail=john.doe@example.com)"
+        fixture: fixtures/search-user-found.ldap
+      - ldap:
+          operation: unbind
+        fixture: fixtures/unbind-success.ldap
+    invoke:
+      returns:
+        status: "success"
+        userDN: "CN=John Doe,OU=Users,DC=corp,DC=example,DC=com"
+        groupDN: "CN=Developers,OU=Groups,DC=corp,DC=example,DC=com"
+        alreadyInGroup: true
