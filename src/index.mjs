@@ -6,6 +6,21 @@ import { setupNock, cleanupNock } from './setup-nock.mjs';
 import { runScenarioHandlers } from './assertions.mjs';
 
 /**
+ * Convert a YAML crypto declaration into real async mock functions.
+ * E.g. { signJWT: { returns: "mock.jwt.token" } } becomes { signJWT: async () => "mock.jwt.token" }
+ */
+export function buildCryptoMocks(cryptoDef) {
+  if (!cryptoDef || typeof cryptoDef !== 'object') return undefined;
+  const mocks = {};
+  for (const [name, def] of Object.entries(cryptoDef)) {
+    if (def && typeof def === 'object' && 'returns' in def) {
+      mocks[name] = async () => def.returns;
+    }
+  }
+  return Object.keys(mocks).length > 0 ? mocks : undefined;
+}
+
+/**
  * Merge scenario-level overrides with action-level defaults.
  * Scenario params/context override action-level values (shallow merge per section).
  */
@@ -15,12 +30,26 @@ function mergeDefaults(action, scenario) {
   const actionContext = action.context || {};
   const scenarioContext = scenario.context || {};
 
+  // Merge crypto declarations (scenario overrides action-level, per-function)
+  const mergedCryptoDef = {
+    ...(actionContext.crypto || {}),
+    ...(scenarioContext.crypto || {})
+  };
+
   const context = {
     ...actionContext,
     ...scenarioContext,
     secrets: { ...(actionContext.secrets || {}), ...(scenarioContext.secrets || {}) },
     environment: { ...(actionContext.environment || {}), ...(scenarioContext.environment || {}) }
   };
+
+  // Replace the raw crypto declaration with real async mock functions
+  const cryptoMocks = buildCryptoMocks(mergedCryptoDef);
+  if (cryptoMocks) {
+    context.crypto = cryptoMocks;
+  } else {
+    delete context.crypto;
+  }
 
   return { params, context };
 }

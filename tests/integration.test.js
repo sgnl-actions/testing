@@ -34,6 +34,16 @@ describe('Sample Action (with common scenarios)', () => {
   });
 });
 
+// ---- Crypto Action (context.crypto mocking) ----
+describe('Crypto Action (context.crypto mocking)', () => {
+  runScenarios({
+    script: join(fixturesDir, 'crypto-action', 'src', 'script.mjs'),
+    scenarios: join(fixturesDir, 'crypto-action', 'tests', 'scenarios.yaml'),
+    includeCommon: false,
+    callerDir: '/'
+  });
+});
+
 // ---- Direct module object (no file path) ----
 describe('Direct module object', () => {
   const mockScript = {

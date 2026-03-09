@@ -1,0 +1,41 @@
+action:
+  params:
+    subject: '{"format":"email","email":"user@example.com"}'
+    audience: https://receiver.example.com/
+  context:
+    secrets:
+      BEARER_AUTH_TOKEN: test-token
+    environment:
+      ADDRESS: https://receiver.example.com/events
+    crypto:
+      signJWT:
+        returns: "mock.jwt.token"
+
+scenarios:
+  - name: transmits event with signed JWT
+    request:
+      method: POST
+      url: https://receiver.example.com/events
+      headers:
+        Authorization: "Bearer mock.jwt.token"
+    fixture: fixtures/200-accepted.http
+    invoke:
+      returns:
+        status: accepted
+        jwt: "mock.jwt.token"
+
+  - name: uses per-scenario crypto override
+    context:
+      crypto:
+        signJWT:
+          returns: "override.jwt.token"
+    request:
+      method: POST
+      url: https://receiver.example.com/events
+      headers:
+        Authorization: "Bearer override.jwt.token"
+    fixture: fixtures/200-accepted.http
+    invoke:
+      returns:
+        status: accepted
+        jwt: "override.jwt.token"
