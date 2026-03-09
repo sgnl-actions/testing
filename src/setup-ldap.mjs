@@ -1,6 +1,7 @@
 import { parse } from 'yaml';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { jest } from '@jest/globals';
 
 /**
  * Parse LDAP fixture file (.ldap format)
@@ -29,7 +30,7 @@ export function parseLDAPFixture(fixturePath, scenariosDir) {
  * Check if scenario steps contain LDAP operations
  */
 export function isLDAPScenario(steps) {
-  return steps && steps.some(step => step.ldap);
+  return Boolean(steps && steps.some(step => step.ldap));
 }
 
 /**
