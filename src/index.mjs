@@ -153,7 +153,7 @@ export function runScenarios(options) {
 export { parseFixture, parseFixtureString } from './parse-fixture.mjs';
 export { parseScenarios, parseScenariosString, COMMON_SCENARIOS } from './parse-scenarios.mjs';
 export { setupNock, cleanupNock } from './setup-nock.mjs';
-export { parseLDAPFixture } from './setup-ldap.mjs';
+export { parseLDAPFixture, parseLDAPScenarios, isLDAPScenario, resolveLDAPStepFixtures, cleanupLDAPMocks } from './setup-ldap.mjs';
 export {
   assertInvokeReturns,
   assertInvokeThrows,
@@ -161,3 +161,6 @@ export {
   assertErrorThrows,
   runScenarioHandlers
 } from './assertions.mjs';
+
+// Note: runLDAPScenarios is not exported from index to avoid jest dependency issues
+// Import directly: import { runLDAPScenarios } from '@sgnl-actions/testing/ldap-scenarios';

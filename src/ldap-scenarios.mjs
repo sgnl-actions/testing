@@ -1,31 +1,8 @@
-import { jest } from '@jest/globals';
-import { parseLDAPFixture } from './setup-ldap.mjs';
+import { parseLDAPFixture, parseLDAPScenarios } from './setup-ldap.mjs';
 import { readFileSync } from 'fs';
 import { parse } from 'yaml';
 import { resolve, dirname } from 'path';
-
-/**
- * Parse LDAP scenarios from YAML file (separate from HTTP scenarios parsing)
- */
-export function parseLDAPScenarios(scenariosPath, options = {}) {
-  const { includeCommon = true } = options;
-  const content = readFileSync(scenariosPath, 'utf8');
-  const data = parse(content);
-
-  if (!data.scenarios || !Array.isArray(data.scenarios)) {
-    throw new Error('scenarios.yaml must have a "scenarios" array');
-  }
-
-  // Filter scenarios that have LDAP steps
-  const ldapScenarios = data.scenarios.filter(scenario => 
-    scenario.steps && scenario.steps.some(step => step.ldap)
-  );
-
-  return {
-    action: data.action || {},
-    scenarios: ldapScenarios
-  };
-}
+import { jest } from '@jest/globals';
 
 /**
  * Check if scenario steps contain LDAP operations

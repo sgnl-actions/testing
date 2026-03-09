@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { parseScenarios, parseScenariosString, COMMON_SCENARIOS } from '../src/parse-scenarios.mjs';
-import { parseLDAPScenarios } from '../src/ldap-scenarios.mjs';
+import { parseLDAPScenarios } from '../src/setup-ldap.mjs';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
