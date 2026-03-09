@@ -35,8 +35,8 @@ async function addUserToGroup(userPrincipalName, groupDN, ldapUrl, baseDN, bindU
     }
     
     const user = searchResult.searchEntries[0];
-    const userDN = user.distinguishedName;
-    const currentGroups = user.memberOf || [];
+    const userDN = user.attributes.distinguishedName;
+    const currentGroups = user.attributes.memberOf || [];
     
     // Check if user is already in the group (idempotency)
     if (currentGroups.includes(groupDN)) {

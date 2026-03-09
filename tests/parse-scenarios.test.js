@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import { parseScenarios, parseScenariosString, COMMON_SCENARIOS } from '../src/parse-scenarios.mjs';
+import { parseLDAPScenarios } from '../src/ldap-scenarios.mjs';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -468,5 +469,216 @@ scenarios:
     expect(result.scenarios).toHaveLength(1);
     expect(result.scenarios[0].name).toBe('basic test');
     expect(result.filePath).toBe(yamlPath);
+  });
+});
+
+describe('parseLDAPScenarios', () => {
+  let tempDir;
+
+  beforeEach(() => {
+    tempDir = join(tmpdir(), `parse-ldap-scenarios-test-${Date.now()}`);
+    mkdirSync(tempDir, { recursive: true });
+  });
+
+  test('parses LDAP scenarios and filters out HTTP-only scenarios', () => {
+    const yaml = `
+action:
+  params:
+    userPrincipalName: john.doe@example.com
+    groupDN: "CN=Developers,OU=Groups,DC=corp,DC=example,DC=com"
+  context:
+    secrets:
+      LDAP_BIND_USER: "CN=Service,OU=ServiceAccounts,DC=corp,DC=example,DC=com"
+      LDAP_BIND_PASSWORD: "password"
+    environment:
+      LDAP_URL: "ldap://dc.corp.example.com:389"
+
+scenarios:
+  - name: successfully add user to group
+    steps:
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+      - ldap:
+          operation: search
+        fixture: fixtures/search-user-found.ldap
+    invoke:
+      returns:
+        status: "success"
+
+  - name: http only scenario
+    request:
+      method: GET
+      url: https://api.example.com/users/123
+    fixture: fixtures/200-user.http
+    invoke:
+      returns:
+        userId: "123"
+
+  - name: mixed scenario with LDAP
+    steps:
+      - request:
+          method: GET
+          url: https://api.example.com/validate
+        fixture: fixtures/200-ok.http
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+    invoke:
+      returns:
+        status: "success"
+`;
+
+    const yamlPath = join(tempDir, 'ldap-scenarios.yaml');
+    writeFileSync(yamlPath, yaml);
+
+    const result = parseLDAPScenarios(yamlPath);
+
+    expect(result.action.params.userPrincipalName).toBe('john.doe@example.com');
+    expect(result.action.context.secrets.LDAP_BIND_USER).toBe('CN=Service,OU=ServiceAccounts,DC=corp,DC=example,DC=com');
+    
+    // Should only include scenarios with LDAP steps (2 out of 3)
+    expect(result.scenarios).toHaveLength(2);
+    expect(result.scenarios[0].name).toBe('successfully add user to group');
+    expect(result.scenarios[1].name).toBe('mixed scenario with LDAP');
+    
+    // HTTP-only scenario should be filtered out
+    const httpOnlyScenario = result.scenarios.find(s => s.name === 'http only scenario');
+    expect(httpOnlyScenario).toBeUndefined();
+  });
+
+  test('returns empty scenarios array when no LDAP scenarios found', () => {
+    const yaml = `
+action:
+  params:
+    userId: usr123
+
+scenarios:
+  - name: http only scenario
+    request:
+      method: GET
+      url: https://api.example.com/users/123
+    fixture: fixtures/200-user.http
+    invoke:
+      returns:
+        userId: "123"
+
+  - name: another http scenario
+    steps:
+      - request:
+          method: POST
+          url: https://api.example.com/create
+        fixture: fixtures/201-created.http
+    invoke:
+      returns:
+        created: true
+`;
+
+    const yamlPath = join(tempDir, 'http-only-scenarios.yaml');
+    writeFileSync(yamlPath, yaml);
+
+    const result = parseLDAPScenarios(yamlPath);
+
+    expect(result.action.params.userId).toBe('usr123');
+    expect(result.scenarios).toHaveLength(0);
+  });
+
+  test('handles scenarios with mixed step types', () => {
+    const yaml = `
+action:
+  params:
+    userPrincipalName: test@example.com
+
+scenarios:
+  - name: ldap with http steps
+    steps:
+      - request:
+          method: GET
+          url: https://api.example.com/validate
+        fixture: fixtures/200-ok.http
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+      - ldap:
+          operation: search
+        fixture: fixtures/search-user.ldap
+      - request:
+          method: POST
+          url: https://api.example.com/log
+        fixture: fixtures/200-logged.http
+    invoke:
+      returns:
+        status: "success"
+`;
+
+    const yamlPath = join(tempDir, 'mixed-scenarios.yaml');
+    writeFileSync(yamlPath, yaml);
+
+    const result = parseLDAPScenarios(yamlPath);
+
+    expect(result.scenarios).toHaveLength(1);
+    const scenario = result.scenarios[0];
+    expect(scenario.name).toBe('ldap with http steps');
+    expect(scenario.steps).toHaveLength(4);
+    
+    // Should preserve all steps, not filter them
+    expect(scenario.steps[0].request.method).toBe('GET');
+    expect(scenario.steps[1].ldap.operation).toBe('bind');
+    expect(scenario.steps[2].ldap.operation).toBe('search');
+    expect(scenario.steps[3].request.method).toBe('POST');
+  });
+
+  test('throws error when scenarios is not an array', () => {
+    const yaml = `
+action:
+  params:
+    userPrincipalName: test@example.com
+
+scenarios: "not an array"
+`;
+
+    const yamlPath = join(tempDir, 'invalid-scenarios.yaml');
+    writeFileSync(yamlPath, yaml);
+
+    expect(() => {
+      parseLDAPScenarios(yamlPath);
+    }).toThrow('scenarios.yaml must have a "scenarios" array');
+  });
+
+  test('throws error when scenarios is missing', () => {
+    const yaml = `
+action:
+  params:
+    userPrincipalName: test@example.com
+`;
+
+    const yamlPath = join(tempDir, 'no-scenarios.yaml');
+    writeFileSync(yamlPath, yaml);
+
+    expect(() => {
+      parseLDAPScenarios(yamlPath);
+    }).toThrow('scenarios.yaml must have a "scenarios" array');
+  });
+
+  test('handles missing action section', () => {
+    const yaml = `
+scenarios:
+  - name: ldap scenario
+    steps:
+      - ldap:
+          operation: bind
+        fixture: fixtures/bind-success.ldap
+    invoke:
+      returns:
+        status: "success"
+`;
+
+    const yamlPath = join(tempDir, 'no-action.yaml');
+    writeFileSync(yamlPath, yaml);
+
+    const result = parseLDAPScenarios(yamlPath);
+
+    expect(result.action).toEqual({});
+    expect(result.scenarios).toHaveLength(1);
   });
 });

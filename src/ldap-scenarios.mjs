@@ -7,7 +7,7 @@ import { resolve, dirname } from 'path';
 /**
  * Parse LDAP scenarios from YAML file (separate from HTTP scenarios parsing)
  */
-function parseLDAPScenarios(scenariosPath, options = {}) {
+export function parseLDAPScenarios(scenariosPath, options = {}) {
   const { includeCommon = true } = options;
   const content = readFileSync(scenariosPath, 'utf8');
   const data = parse(content);
