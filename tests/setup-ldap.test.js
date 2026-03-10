@@ -91,6 +91,84 @@ message: "Modify successful"`;
       });
     });
 
+    test('parses LDAP fixture with add operation', () => {
+      const fixtureContent = `# LDAP add operation
+operation: add
+result: success
+code: 0
+message: "Add successful"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('add-user.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'add',
+        result: 'success',
+        code: 0,
+        message: 'Add successful'
+      });
+    });
+
+    test('parses LDAP fixture with delete operation', () => {
+      const fixtureContent = `# LDAP delete operation
+operation: delete
+result: success
+code: 0
+message: "Delete successful"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('delete-user.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'delete',
+        result: 'success',
+        code: 0,
+        message: 'Delete successful'
+      });
+    });
+
+    test('parses LDAP fixture with modifyDN operation', () => {
+      const fixtureContent = `# LDAP modifyDN operation
+operation: modifyDN
+result: success
+code: 0
+message: "ModifyDN successful"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('modifydn-user.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'modifyDN',
+        result: 'success',
+        code: 0,
+        message: 'ModifyDN successful'
+      });
+    });
+
+    test('parses LDAP fixture with compare operation and boolean result', () => {
+      const fixtureContent = `# LDAP compare operation
+operation: compare
+result: success
+code: 0
+message: "Compare successful"
+compareResult: true`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('compare-attribute.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'compare',
+        result: 'success',
+        code: 0,
+        message: 'Compare successful',
+        compareResult: true
+      });
+    });
+
     test('parses LDAP fixture with error result', () => {
       const fixtureContent = `# LDAP bind failure
 operation: bind
@@ -107,6 +185,82 @@ message: "Invalid credentials"`;
         result: 'error',
         code: 49,
         message: 'Invalid credentials'
+      });
+    });
+
+    test('parses LDAP fixture with add operation error', () => {
+      const fixtureContent = `# LDAP add failure
+operation: add
+result: error
+code: 68
+message: "Entry already exists"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('add-error.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'add',
+        result: 'error',
+        code: 68,
+        message: 'Entry already exists'
+      });
+    });
+
+    test('parses LDAP fixture with delete operation error', () => {
+      const fixtureContent = `# LDAP delete failure
+operation: delete
+result: error
+code: 32
+message: "No such object"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('delete-error.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'delete',
+        result: 'error',
+        code: 32,
+        message: 'No such object'
+      });
+    });
+
+    test('parses LDAP fixture with modifyDN operation error', () => {
+      const fixtureContent = `# LDAP modifyDN failure
+operation: modifyDN
+result: error
+code: 50
+message: "Insufficient access rights"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('modifydn-error.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'modifyDN',
+        result: 'error',
+        code: 50,
+        message: 'Insufficient access rights'
+      });
+    });
+
+    test('parses LDAP fixture with compare operation error', () => {
+      const fixtureContent = `# LDAP compare failure
+operation: compare
+result: error
+code: 16
+message: "No such attribute"`;
+
+      mockReadFileSync.mockReturnValue(fixtureContent);
+
+      const result = parseLDAPFixture('compare-error.ldap', '/test/scenarios');
+
+      expect(result).toEqual({
+        operation: 'compare',
+        result: 'error',
+        code: 16,
+        message: 'No such attribute'
       });
     });
 
@@ -140,6 +294,17 @@ invalid: yaml: content: [unclosed`;
         { request: { method: 'GET', url: 'https://api.example.com/test' } },
         { ldap: { operation: 'bind' } },
         { ldap: { operation: 'search' } }
+      ];
+
+      expect(isLDAPScenario(steps)).toBe(true);
+    });
+
+    test('returns true when steps contain new LDAP operations', () => {
+      const steps = [
+        { ldap: { operation: 'add' } },
+        { ldap: { operation: 'delete' } },
+        { ldap: { operation: 'modifyDN' } },
+        { ldap: { operation: 'compare' } }
       ];
 
       expect(isLDAPScenario(steps)).toBe(true);
@@ -263,6 +428,43 @@ code: 0`;
       expect(result[0].fixtureData.operation).toBe('bind');
       expect(result[1].fixtureData.operation).toBe('search');
       expect(mockReadFileSync).toHaveBeenCalledTimes(2);
+    });
+
+    test('resolves new LDAP operations with fixtures', () => {
+      mockReadFileSync
+        .mockReturnValueOnce('operation: add\nresult: success\ncode: 0')
+        .mockReturnValueOnce('operation: delete\nresult: success\ncode: 0')
+        .mockReturnValueOnce('operation: modifyDN\nresult: success\ncode: 0')
+        .mockReturnValueOnce('operation: compare\nresult: success\ncode: 0\ncompareResult: true');
+
+      const steps = [
+        { 
+          ldap: { operation: 'add' },
+          fixture: 'add.ldap'
+        },
+        { 
+          ldap: { operation: 'delete' },
+          fixture: 'delete.ldap'
+        },
+        { 
+          ldap: { operation: 'modifyDN' },
+          fixture: 'modifydn.ldap'
+        },
+        { 
+          ldap: { operation: 'compare' },
+          fixture: 'compare.ldap'
+        }
+      ];
+
+      const result = resolveLDAPStepFixtures(steps, '/test/scenarios');
+
+      expect(result).toHaveLength(4);
+      expect(result[0].fixtureData.operation).toBe('add');
+      expect(result[1].fixtureData.operation).toBe('delete');
+      expect(result[2].fixtureData.operation).toBe('modifyDN');
+      expect(result[3].fixtureData.operation).toBe('compare');
+      expect(result[3].fixtureData.compareResult).toBe(true);
+      expect(mockReadFileSync).toHaveBeenCalledTimes(4);
     });
 
     test('handles mixed LDAP and HTTP steps', () => {

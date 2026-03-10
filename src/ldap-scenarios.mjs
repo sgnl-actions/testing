@@ -89,30 +89,27 @@ export function runLDAPScenarios(options) {
 
   describe(`LDAP scenarios: ${ldapScenarios.length} defined`, () => {
     let script;
-    const mockBind = jest.fn();
-    const mockUnbind = jest.fn();
-    const mockModify = jest.fn();
-    const mockSearch = jest.fn();
-
-    // Mock ldapts module
-    jest.unstable_mockModule('ldapts', () => ({
-      Client: jest.fn().mockImplementation(() => ({
-        bind: mockBind,
-        unbind: mockUnbind,
-        modify: mockModify,
-        search: mockSearch
-      })),
-      Change: jest.fn().mockImplementation((opts) => ({
-        operation: opts.operation,
-        modification: opts.modification
-      })),
-      Attribute: jest.fn().mockImplementation((opts) => ({
-        type: opts.type,
-        values: opts.values
-      }))
-    }));
-
+    let mockFunctions;
+    
     beforeAll(async () => {
+      // Import ldapts after it has been mocked externally
+      const ldapts = await import('ldapts');
+      
+      // Create client instance to get the mock functions
+      // Pass empty object as options to avoid constructor errors
+      const clientInstance = new ldapts.Client({});
+      
+      mockFunctions = {
+        mockBind: clientInstance.bind,
+        mockUnbind: clientInstance.unbind,
+        mockModify: clientInstance.modify,
+        mockSearch: clientInstance.search,
+        mockAdd: clientInstance.add || jest.fn(), // fallback if add not mocked
+        mockDelete: clientInstance.delete || jest.fn(), // fallback if delete not mocked
+        mockModifyDN: clientInstance.modifyDN || jest.fn(), // fallback if modifyDN not mocked
+        mockCompare: clientInstance.compare || jest.fn() // fallback if compare not mocked
+      };
+      
       if (scriptPromise) {
         const mod = await scriptPromise;
         script = mod.default || mod;
@@ -129,7 +126,7 @@ export function runLDAPScenarios(options) {
     });
 
     function setupScenarioMocks(resolvedSteps) {
-      const operationCounters = { bind: 0, search: 0, modify: 0, unbind: 0 };
+      const operationCounters = { bind: 0, search: 0, modify: 0, unbind: 0, add: 0, delete: 0, modifyDN: 0, compare: 0 };
 
       function getStepForOperation(operation) {
         let currentCounter = 0;
@@ -153,7 +150,7 @@ export function runLDAPScenarios(options) {
         return null;
       }
 
-      mockBind.mockImplementation(() => {
+      mockFunctions.mockBind.mockImplementation(() => {
         const step = getStepForOperation('bind');
         if (step && step.fixtureData) {
           if (step.fixtureData.result === 'error') {
@@ -165,7 +162,7 @@ export function runLDAPScenarios(options) {
         return Promise.resolve();
       });
 
-      mockSearch.mockImplementation(() => {
+      mockFunctions.mockSearch.mockImplementation(() => {
         const step = getStepForOperation('search');
         if (step && step.fixtureData) {
           if (step.fixtureData.result === 'error') {
@@ -178,7 +175,7 @@ export function runLDAPScenarios(options) {
         return Promise.resolve({ searchEntries: [] });
       });
 
-      mockModify.mockImplementation(() => {
+      mockFunctions.mockModify.mockImplementation(() => {
         const step = getStepForOperation('modify');
         if (step && step.fixtureData) {
           if (step.fixtureData.result === 'error') {
@@ -190,7 +187,7 @@ export function runLDAPScenarios(options) {
         return Promise.resolve();
       });
 
-      mockUnbind.mockImplementation(() => {
+      mockFunctions.mockUnbind.mockImplementation(() => {
         const step = getStepForOperation('unbind');
         if (step && step.fixtureData) {
           if (step.fixtureData.result === 'error') {
@@ -200,6 +197,56 @@ export function runLDAPScenarios(options) {
           }
         }
         return Promise.resolve();
+      });
+
+      mockFunctions.mockAdd.mockImplementation(() => {
+        const step = getStepForOperation('add');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+        }
+        return Promise.resolve();
+      });
+
+      mockFunctions.mockDelete.mockImplementation(() => {
+        const step = getStepForOperation('delete');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+        }
+        return Promise.resolve();
+      });
+
+      mockFunctions.mockModifyDN.mockImplementation(() => {
+        const step = getStepForOperation('modifyDN');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+        }
+        return Promise.resolve();
+      });
+
+      mockFunctions.mockCompare.mockImplementation(() => {
+        const step = getStepForOperation('compare');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+          // Compare operations return boolean result
+          return Promise.resolve(step.fixtureData.compareResult || false);
+        }
+        return Promise.resolve(false);
       });
     }
 
