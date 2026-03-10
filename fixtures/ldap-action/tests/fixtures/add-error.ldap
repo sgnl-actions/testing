@@ -1,0 +1,5 @@
+# LDAP add failure - entry already exists
+operation: add
+result: error
+code: 68
+message: "Entry already exists"
