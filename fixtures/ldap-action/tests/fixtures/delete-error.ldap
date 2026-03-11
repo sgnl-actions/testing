@@ -1,0 +1,5 @@
+# LDAP delete failure - no such object
+operation: delete
+result: error
+code: 32
+message: "No such object"

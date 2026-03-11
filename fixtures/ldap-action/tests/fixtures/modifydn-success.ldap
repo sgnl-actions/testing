@@ -1,0 +1,5 @@
+# LDAP modifyDN success - entry renamed/moved
+operation: modifyDN
+result: success
+code: 0
+message: "ModifyDN successful"

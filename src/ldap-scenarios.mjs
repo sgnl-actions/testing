@@ -1,8 +1,31 @@
-import { parseLDAPFixture, parseLDAPScenarios } from './setup-ldap.mjs';
+import { jest } from '@jest/globals';
+import { parseLDAPFixture } from './setup-ldap.mjs';
 import { readFileSync } from 'fs';
 import { parse } from 'yaml';
 import { resolve, dirname } from 'path';
-import { jest } from '@jest/globals';
+
+/**
+ * Parse LDAP scenarios from YAML file (separate from HTTP scenarios parsing)
+ */
+export function parseLDAPScenarios(scenariosPath, options = {}) {
+  const { includeCommon = true } = options;
+  const content = readFileSync(scenariosPath, 'utf8');
+  const data = parse(content);
+
+  if (!data.scenarios || !Array.isArray(data.scenarios)) {
+    throw new Error('scenarios.yaml must have a "scenarios" array');
+  }
+
+  // Filter scenarios that have LDAP steps
+  const ldapScenarios = data.scenarios.filter(scenario => 
+    scenario.steps && scenario.steps.some(step => step.ldap)
+  );
+
+  return {
+    action: data.action || {},
+    scenarios: ldapScenarios
+  };
+}
 
 /**
  * Check if scenario steps contain LDAP operations
@@ -93,6 +116,10 @@ export function runLDAPScenarios(options) {
     const mockUnbind = jest.fn();
     const mockModify = jest.fn();
     const mockSearch = jest.fn();
+    const mockAdd = jest.fn();
+    const mockDelete = jest.fn();
+    const mockModifyDN = jest.fn();
+    const mockCompare = jest.fn();
 
     // Mock ldapts module
     jest.unstable_mockModule('ldapts', () => ({
@@ -100,7 +127,11 @@ export function runLDAPScenarios(options) {
         bind: mockBind,
         unbind: mockUnbind,
         modify: mockModify,
-        search: mockSearch
+        search: mockSearch,
+        add: mockAdd,
+        delete: mockDelete,
+        modifyDN: mockModifyDN,
+        compare: mockCompare
       })),
       Change: jest.fn().mockImplementation((opts) => ({
         operation: opts.operation,
@@ -129,7 +160,7 @@ export function runLDAPScenarios(options) {
     });
 
     function setupScenarioMocks(resolvedSteps) {
-      const operationCounters = { bind: 0, search: 0, modify: 0, unbind: 0 };
+      const operationCounters = { bind: 0, search: 0, modify: 0, unbind: 0, add: 0, delete: 0, modifyDN: 0, compare: 0 };
 
       function getStepForOperation(operation) {
         let currentCounter = 0;
@@ -200,6 +231,56 @@ export function runLDAPScenarios(options) {
           }
         }
         return Promise.resolve();
+      });
+
+      mockAdd.mockImplementation(() => {
+        const step = getStepForOperation('add');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+        }
+        return Promise.resolve();
+      });
+
+      mockDelete.mockImplementation(() => {
+        const step = getStepForOperation('delete');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+        }
+        return Promise.resolve();
+      });
+
+      mockModifyDN.mockImplementation(() => {
+        const step = getStepForOperation('modifyDN');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+        }
+        return Promise.resolve();
+      });
+
+      mockCompare.mockImplementation(() => {
+        const step = getStepForOperation('compare');
+        if (step && step.fixtureData) {
+          if (step.fixtureData.result === 'error') {
+            const error = new Error(step.fixtureData.message);
+            error.code = step.fixtureData.code;
+            throw error;
+          }
+          // Compare operations return boolean result
+          return Promise.resolve(step.fixtureData.compareResult || false);
+        }
+        return Promise.resolve(false);
       });
     }
 
