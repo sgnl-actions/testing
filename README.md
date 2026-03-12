@@ -86,13 +86,6 @@ runLDAPScenarios({
   scenarios: './tests/scenarios.yaml'
 });
 ```
-import { runScenarios } from '@sgnl-actions/testing';
-
-runScenarios({
-  script: './src/script.mjs',
-  scenarios: './tests/scenarios.yaml'
-});
-```
 
 All paths are relative to the project root (where `npm test` runs from).
 

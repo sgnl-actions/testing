@@ -17,7 +17,7 @@ export function parseLDAPScenarios(scenariosPath, options = {}) {
   }
 
   // Filter scenarios that have LDAP steps
-  const ldapScenarios = data.scenarios.filter(scenario => 
+  const ldapScenarios = data.scenarios.filter(scenario =>
     scenario.steps && scenario.steps.some(step => step.ldap)
   );
 
@@ -69,11 +69,11 @@ function mergeDefaults(action, scenario) {
 
 /**
  * Run LDAP scenarios for AD actions - simple interface like runScenarios
- * 
+ *
  * Usage:
  * ```javascript
  * import { runLDAPScenarios } from '@sgnl-actions/testing/ldap-scenarios';
- * 
+ *
  * runLDAPScenarios({
  *   script: './src/script.mjs',
  *   scenarios: './tests/scenarios.yaml'
@@ -88,6 +88,123 @@ export function runLDAPScenarios(options) {
     callerDir
   } = options;
 
+  // Create mock functions first
+  const mockBind = jest.fn();
+  const mockUnbind = jest.fn();
+  const mockModify = jest.fn();
+  const mockSearch = jest.fn();
+  const mockAdd = jest.fn();
+  const mockDelete = jest.fn();
+  const mockModifyDN = jest.fn();
+  const mockCompare = jest.fn();
+
+  // Mock ldapts module IMMEDIATELY - before any other operations
+  jest.unstable_mockModule('ldapts', () => ({
+    Client: jest.fn().mockImplementation(() => ({
+      bind: mockBind,
+      unbind: mockUnbind,
+      modify: mockModify,
+      search: mockSearch,
+      add: mockAdd,
+      delete: mockDelete,
+      modifyDN: mockModifyDN,
+      compare: mockCompare,
+      // Ensure no real connections are made by overriding any connection methods
+      connect: jest.fn().mockResolvedValue(),
+      disconnect: jest.fn().mockResolvedValue(),
+      startTLS: jest.fn().mockResolvedValue()
+    })),
+    Change: jest.fn().mockImplementation((opts) => ({
+      operation: opts.operation,
+      modification: opts.modification
+    })),
+    Attribute: jest.fn().mockImplementation((opts) => ({
+      type: opts.type,
+      values: opts.values
+    })),
+
+    // Filter classes - essential for complex LDAP queries like objectGUID searches
+    EqualityFilter: jest.fn().mockImplementation((opts) => ({
+      attribute: opts.attribute,
+      value: opts.value,
+      toString: () => `(${opts.attribute}=${opts.value})`
+    })),
+    AndFilter: jest.fn().mockImplementation((opts) => ({
+      filters: opts.filters || [],
+      toString: () => `(&${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
+    })),
+    OrFilter: jest.fn().mockImplementation((opts) => ({
+      filters: opts.filters || [],
+      toString: () => `(|${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
+    })),
+    NotFilter: jest.fn().mockImplementation((opts) => ({
+      filter: opts.filter,
+      toString: () => `(!${opts.filter?.toString ? opts.filter.toString() : opts.filter})`
+    })),
+    PresenceFilter: jest.fn().mockImplementation((opts) => ({
+      attribute: opts.attribute,
+      toString: () => `(${opts.attribute}=*)`
+    })),
+    SubstringFilter: jest.fn().mockImplementation((opts) => ({
+      attribute: opts.attribute,
+      initial: opts.initial,
+      any: opts.any,
+      final: opts.final,
+      toString: () => `(${opts.attribute}=*substring*)`
+    })),
+    GreaterThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
+      attribute: opts.attribute,
+      value: opts.value,
+      toString: () => `(${opts.attribute}>=${opts.value})`
+    })),
+    LessThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
+      attribute: opts.attribute,
+      value: opts.value,
+      toString: () => `(${opts.attribute}<=${opts.value})`
+    })),
+    ApproximateFilter: jest.fn().mockImplementation((opts) => ({
+      attribute: opts.attribute,
+      value: opts.value,
+      toString: () => `(${opts.attribute}~=${opts.value})`
+    })),
+    ExtensibleFilter: jest.fn().mockImplementation((opts) => opts),
+
+    // Other commonly used classes
+    DN: jest.fn().mockImplementation((dn) => ({
+      toString: () => dn || ''
+    })),
+    Filter: jest.fn().mockImplementation((opts) => opts),
+
+    // Common LDAP error classes
+    ResultCodeError: jest.fn(),
+    NoSuchObjectError: jest.fn(),
+    InvalidCredentialsError: jest.fn(),
+    InsufficientAccessError: jest.fn(),
+    NoSuchAttributeError: jest.fn(),
+    ConstraintViolationError: jest.fn(),
+    AlreadyExistsError: jest.fn(),
+    UnwillingToPerformError: jest.fn(),
+    SizeLimitExceededError: jest.fn(),
+    TimeLimitExceededError: jest.fn(),
+    InvalidSyntaxError: jest.fn(),
+    OperationsError: jest.fn(),
+    ProtocolError: jest.fn(),
+    BusyError: jest.fn(),
+    UnavailableError: jest.fn(),
+
+    // Request/Response classes
+    SearchEntry: jest.fn(),
+    SearchResponse: jest.fn(),
+    ModifyRequest: jest.fn(),
+    ModifyResponse: jest.fn(),
+    AddRequest: jest.fn(),
+    AddResponse: jest.fn(),
+    DeleteRequest: jest.fn(),
+    DeleteResponse: jest.fn(),
+    BindRequest: jest.fn(),
+    BindResponse: jest.fn()
+  }));
+
   // Resolve the caller directory for relative paths
   const baseDir = callerDir || process.cwd();
   const resolvedScenariosPath = resolve(baseDir, scenariosPath);
@@ -96,59 +213,17 @@ export function runLDAPScenarios(options) {
   // Parse LDAP scenarios using separate parser
   const { action, scenarios } = parseLDAPScenarios(resolvedScenariosPath, { includeCommon });
 
-  // All scenarios from parseLDAPScenarios are already filtered to LDAP scenarios
-  const ldapScenarios = scenarios;
-
-  // Resolve the script
-  let scriptModule;
-  let scriptPromise;
-
-  if (typeof scriptPathOrModule === 'string') {
-    const resolvedScriptPath = resolve(baseDir, scriptPathOrModule);
-    scriptPromise = import(resolvedScriptPath);
-  } else {
-    scriptModule = scriptPathOrModule;
-  }
-
-  describe(`LDAP scenarios: ${ldapScenarios.length} defined`, () => {
+  describe(`LDAP scenarios: ${scenarios.length} defined`, () => {
     let script;
-    const mockBind = jest.fn();
-    const mockUnbind = jest.fn();
-    const mockModify = jest.fn();
-    const mockSearch = jest.fn();
-    const mockAdd = jest.fn();
-    const mockDelete = jest.fn();
-    const mockModifyDN = jest.fn();
-    const mockCompare = jest.fn();
-
-    // Mock ldapts module
-    jest.unstable_mockModule('ldapts', () => ({
-      Client: jest.fn().mockImplementation(() => ({
-        bind: mockBind,
-        unbind: mockUnbind,
-        modify: mockModify,
-        search: mockSearch,
-        add: mockAdd,
-        delete: mockDelete,
-        modifyDN: mockModifyDN,
-        compare: mockCompare
-      })),
-      Change: jest.fn().mockImplementation((opts) => ({
-        operation: opts.operation,
-        modification: opts.modification
-      })),
-      Attribute: jest.fn().mockImplementation((opts) => ({
-        type: opts.type,
-        values: opts.values
-      }))
-    }));
 
     beforeAll(async () => {
-      if (scriptPromise) {
-        const mod = await scriptPromise;
+      // Import the script after the mock is established
+      if (typeof scriptPathOrModule === 'string') {
+        const resolvedScriptPath = resolve(baseDir, scriptPathOrModule);
+        const mod = await import(resolvedScriptPath);
         script = mod.default || mod;
       } else {
-        script = scriptModule;
+        script = scriptPathOrModule;
       }
     });
 
@@ -284,7 +359,7 @@ export function runLDAPScenarios(options) {
       });
     }
 
-    for (const scenario of ldapScenarios) {
+    for (const scenario of scenarios) {
       test(scenario.name, async () => {
         // Merge action defaults with scenario overrides
         const { params, context } = mergeDefaults(action, scenario);
@@ -301,7 +376,7 @@ export function runLDAPScenarios(options) {
               .rejects.toThrow(scenario.invoke.throws);
           } else {
             const result = await script.invoke(params, context);
-            
+
             if (scenario.invoke.returns) {
               Object.keys(scenario.invoke.returns).forEach(key => {
                 expect(result[key]).toEqual(scenario.invoke.returns[key]);

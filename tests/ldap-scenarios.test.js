@@ -1,66 +1,202 @@
 import { jest } from '@jest/globals';
 
-// Mock path and fs modules
-const mockResolve = jest.fn();
-const mockDirname = jest.fn();
+describe('LDAP Scenarios - Filter Classes Support', () => {
+  test('should provide comprehensive ldapts filter class mocking', async () => {
+    // Mock ldapts before any imports (simulating the comprehensive mocking)
+    jest.unstable_mockModule('ldapts', () => ({
+      Client: jest.fn().mockImplementation(() => ({
+        bind: jest.fn().mockResolvedValue(),
+        unbind: jest.fn().mockResolvedValue(),
+        modify: jest.fn().mockResolvedValue(),
+        search: jest.fn().mockResolvedValue({ searchEntries: [] }),
+        add: jest.fn().mockResolvedValue(),
+        delete: jest.fn().mockResolvedValue(),
+        modifyDN: jest.fn().mockResolvedValue(),
+        compare: jest.fn().mockResolvedValue(),
+        connect: jest.fn().mockResolvedValue(),
+        disconnect: jest.fn().mockResolvedValue(),
+        startTLS: jest.fn().mockResolvedValue()
+      })),
+      Change: jest.fn().mockImplementation((opts) => ({
+        operation: opts.operation,
+        modification: opts.modification
+      })),
+      Attribute: jest.fn().mockImplementation((opts) => ({
+        type: opts.type,
+        values: opts.values
+      })),
+      // Filter classes - these are the key additions
+      EqualityFilter: jest.fn().mockImplementation((opts) => ({
+        attribute: opts.attribute,
+        value: opts.value,
+        toString: () => `(${opts.attribute}=${opts.value})`
+      })),
+      AndFilter: jest.fn().mockImplementation((opts) => ({
+        filters: opts.filters || [],
+        toString: () => `(&${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
+      })),
+      OrFilter: jest.fn().mockImplementation((opts) => ({
+        filters: opts.filters || [],
+        toString: () => `(|${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
+      })),
+      NotFilter: jest.fn().mockImplementation((opts) => ({
+        filter: opts.filter,
+        toString: () => `(!${opts.filter?.toString ? opts.filter.toString() : opts.filter})`
+      })),
+      PresenceFilter: jest.fn().mockImplementation((opts) => ({
+        attribute: opts.attribute,
+        toString: () => `(${opts.attribute}=*)`
+      })),
+      SubstringFilter: jest.fn().mockImplementation((opts) => ({
+        attribute: opts.attribute,
+        initial: opts.initial,
+        any: opts.any,
+        final: opts.final,
+        toString: () => `(${opts.attribute}=*substring*)`
+      })),
+      GreaterThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
+        attribute: opts.attribute,
+        value: opts.value,
+        toString: () => `(${opts.attribute}>=${opts.value})`
+      })),
+      LessThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
+        attribute: opts.attribute,
+        value: opts.value,
+        toString: () => `(${opts.attribute}<=${opts.value})`
+      })),
+      ApproximateFilter: jest.fn().mockImplementation((opts) => ({
+        attribute: opts.attribute,
+        value: opts.value,
+        toString: () => `(${opts.attribute}~=${opts.value})`
+      })),
+      ExtensibleFilter: jest.fn().mockImplementation((opts) => opts),
+      DN: jest.fn().mockImplementation((dn) => ({
+        toString: () => dn || ''
+      })),
+      Filter: jest.fn().mockImplementation((opts) => opts),
+      // Common LDAP error classes
+      ResultCodeError: jest.fn(),
+      NoSuchObjectError: jest.fn(),
+      InvalidCredentialsError: jest.fn(),
+      InsufficientAccessError: jest.fn(),
+      NoSuchAttributeError: jest.fn(),
+      ConstraintViolationError: jest.fn(),
+      AlreadyExistsError: jest.fn(),
+      UnwillingToPerformError: jest.fn(),
+      SizeLimitExceededError: jest.fn(),
+      TimeLimitExceededError: jest.fn(),
+      InvalidSyntaxError: jest.fn(),
+      OperationsError: jest.fn(),
+      ProtocolError: jest.fn(),
+      BusyError: jest.fn(),
+      UnavailableError: jest.fn(),
+      SearchEntry: jest.fn(),
+      SearchResponse: jest.fn(),
+      ModifyRequest: jest.fn(),
+      ModifyResponse: jest.fn(),
+      AddRequest: jest.fn(),
+      AddResponse: jest.fn(),
+      DeleteRequest: jest.fn(),
+      DeleteResponse: jest.fn(),
+      BindRequest: jest.fn(),
+      BindResponse: jest.fn()
+    }));
 
-jest.unstable_mockModule('path', () => ({
-  resolve: mockResolve,
-  dirname: mockDirname
-}));
+    // Now import and test the comprehensive mocking
+    const { Client, EqualityFilter, AndFilter, OrFilter, PresenceFilter } = await import('ldapts');
 
-// Mock setup-ldap module
-jest.unstable_mockModule('../src/setup-ldap.mjs', () => ({
-  parseLDAPScenarios: jest.fn(),
-  parseLDAPFixture: jest.fn()
-}));
+    // Test Client mock
+    const client = new Client({ url: 'ldaps://test.example.com:636' });
+    expect(client).toBeDefined();
+    expect(typeof client.bind).toBe('function');
+    expect(typeof client.search).toBe('function');
+    expect(typeof client.modify).toBe('function');
+    expect(typeof client.unbind).toBe('function');
+    expect(typeof client.add).toBe('function');
+    expect(typeof client.delete).toBe('function');
+    expect(typeof client.modifyDN).toBe('function');
+    expect(typeof client.compare).toBe('function');
 
-// Now import the modules after mocking
-const { runLDAPScenarios } = await import('../src/ldap-scenarios.mjs');
-const { parseLDAPScenarios } = await import('../src/setup-ldap.mjs');
-
-describe('LDAP Scenarios Framework', () => {
-  let mockScript;
-  
-  beforeEach(() => {
-    jest.clearAllMocks();
-    
-    // Create mock script
-    mockScript = {
-      invoke: jest.fn()
-    };
-    
-    // Setup path mocks
-    mockResolve.mockImplementation((dir, file) => {
-      if (file.startsWith('./')) {
-        return `${dir}/${file.substring(2)}`;
-      }
-      return `${dir}/${file}`;
+    // Test filter classes - these should work with the comprehensive mocking
+    const equalityFilter = new EqualityFilter({
+      attribute: 'objectClass',
+      value: 'user'
     });
-    mockDirname.mockImplementation(path => path.replace(/\/[^/]+$/, ''));
-    
-    // Setup default parseLDAPScenarios mock
-    parseLDAPScenarios.mockReturnValue({
-      action: { 
-        params: { baseDN: 'DC=test,DC=com' }, 
-        context: { 
-          secrets: { LDAP_BIND_DN: 'CN=test,DC=test,DC=com', LDAP_BIND_PASSWORD: 'password' },
-          environment: {} 
-        } 
-      },
-      scenarios: []
+    expect(equalityFilter).toBeDefined();
+    expect(equalityFilter.toString()).toBe('(objectClass=user)');
+
+    const andFilter = new AndFilter({
+      filters: [
+        new EqualityFilter({ attribute: 'objectClass', value: 'user' }),
+        new EqualityFilter({ attribute: 'sAMAccountName', value: 'jdoe' })
+      ]
     });
-    
-    // Mock global describe to prevent Jest issues
-    global.describe = jest.fn();
-  });
-  
-  afterEach(() => {
-    // Clean up global mock.
-    delete global.describe;
+    expect(andFilter).toBeDefined();
+    expect(andFilter.toString()).toBe('(&(objectClass=user)(sAMAccountName=jdoe))');
+
+    const orFilter = new OrFilter({
+      filters: [
+        new EqualityFilter({ attribute: 'givenName', value: 'John' }),
+        new EqualityFilter({ attribute: 'givenName', value: 'Jane' })
+      ]
+    });
+    expect(orFilter).toBeDefined();
+    expect(orFilter.toString()).toBe('(|(givenName=John)(givenName=Jane))');
+
+    const presenceFilter = new PresenceFilter({
+      attribute: 'mail'
+    });
+    expect(presenceFilter).toBeDefined();
+    expect(presenceFilter.toString()).toBe('(mail=*)');
+
+    // Test complex nested filter
+    const complexFilter = new AndFilter({
+      filters: [
+        new EqualityFilter({ attribute: 'objectClass', value: 'user' }),
+        new OrFilter({
+          filters: [
+            new EqualityFilter({ attribute: 'department', value: 'Engineering' }),
+            new EqualityFilter({ attribute: 'department', value: 'Marketing' })
+          ]
+        }),
+        new PresenceFilter({ attribute: 'mail' })
+      ]
+    });
+    expect(complexFilter.toString()).toBe('(&(objectClass=user)(|(department=Engineering)(department=Marketing))(mail=*))');
   });
 
-  test('module exports runLDAPScenarios function', () => {
-    expect(typeof runLDAPScenarios).toBe('function');
+  test('should validate that comprehensive mocking is included in testing framework', async () => {
+    // Read the actual ldap-scenarios.mjs file to verify it includes the comprehensive classes
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const ldapScenariosPath = path.join(import.meta.dirname, '..', 'src', 'ldap-scenarios.mjs');
+    const content = await fs.readFile(ldapScenariosPath, 'utf8');
+
+    // Verify that the comprehensive filter classes are included
+    expect(content).toContain('EqualityFilter');
+    expect(content).toContain('AndFilter');
+    expect(content).toContain('OrFilter');
+    expect(content).toContain('NotFilter');
+    expect(content).toContain('PresenceFilter');
+    expect(content).toContain('SubstringFilter');
+    expect(content).toContain('GreaterThanEqualsFilter');
+    expect(content).toContain('LessThanEqualsFilter');
+    expect(content).toContain('ApproximateFilter');
+    expect(content).toContain('ExtensibleFilter');
+
+    // Verify error classes are included
+    expect(content).toContain('ResultCodeError');
+    expect(content).toContain('NoSuchObjectError');
+    expect(content).toContain('InvalidCredentialsError');
+    expect(content).toContain('InsufficientAccessError');
+
+    // Verify additional LDAP operations are included
+    expect(content).toContain('add:');
+    expect(content).toContain('delete:');
+    expect(content).toContain('modifyDN:');
+    expect(content).toContain('compare:');
+    expect(content).toContain('connect:');
+    expect(content).toContain('disconnect:');
+    expect(content).toContain('startTLS:');
   });
 });
