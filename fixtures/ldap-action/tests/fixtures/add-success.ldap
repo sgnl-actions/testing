@@ -1,0 +1,5 @@
+# LDAP add success - create new entry
+operation: add
+result: success
+code: 0
+message: "Add successful"

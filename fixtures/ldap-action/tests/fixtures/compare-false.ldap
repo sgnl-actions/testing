@@ -1,0 +1,6 @@
+# LDAP compare success - attribute does not match
+operation: compare
+result: success
+code: 0
+message: "Compare successful"
+compareResult: false

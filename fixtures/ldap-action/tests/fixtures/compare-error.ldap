@@ -1,0 +1,5 @@
+# LDAP compare failure - no such attribute
+operation: compare
+result: error
+code: 16
+message: "No such attribute"

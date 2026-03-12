@@ -112,6 +112,10 @@ describe('LDAP Scenarios - Filter Classes Support', () => {
     expect(typeof client.search).toBe('function');
     expect(typeof client.modify).toBe('function');
     expect(typeof client.unbind).toBe('function');
+    expect(typeof client.add).toBe('function');
+    expect(typeof client.delete).toBe('function');
+    expect(typeof client.modifyDN).toBe('function');
+    expect(typeof client.compare).toBe('function');
 
     // Test filter classes - these should work with the comprehensive mocking
     const equalityFilter = new EqualityFilter({
@@ -162,7 +166,7 @@ describe('LDAP Scenarios - Filter Classes Support', () => {
   });
 
   test('should validate that comprehensive mocking is included in testing framework', async () => {
-    // Read the actual ldap-scenarios.mjs file to verify it includes the enhanced classes
+    // Read the actual ldap-scenarios.mjs file to verify it includes the comprehensive classes
     const fs = await import('fs/promises');
     const path = await import('path');
     const ldapScenariosPath = path.join(import.meta.dirname, '..', 'src', 'ldap-scenarios.mjs');
@@ -186,11 +190,13 @@ describe('LDAP Scenarios - Filter Classes Support', () => {
     expect(content).toContain('InvalidCredentialsError');
     expect(content).toContain('InsufficientAccessError');
 
-    // Verify additional client methods for preventing network connections
-    expect(content).toContain('add: jest.fn().mockResolvedValue()');
-    expect(content).toContain('delete: jest.fn().mockResolvedValue()');
-    expect(content).toContain('connect: jest.fn().mockResolvedValue()');
-    expect(content).toContain('disconnect: jest.fn().mockResolvedValue()');
-    expect(content).toContain('startTLS: jest.fn().mockResolvedValue()');
+    // Verify additional LDAP operations are included
+    expect(content).toContain('add:');
+    expect(content).toContain('delete:');
+    expect(content).toContain('modifyDN:');
+    expect(content).toContain('compare:');
+    expect(content).toContain('connect:');
+    expect(content).toContain('disconnect:');
+    expect(content).toContain('startTLS:');
   });
 });
