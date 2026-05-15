@@ -34,9 +34,9 @@
   "license": "MIT",
   "dependencies": {
     "js-yaml": "^4.1.0",
-    "ldapts": "^7.3.0",
+    "ldapts": "^8.1.7",
     "nock": "^14.0.0",
-    "yaml": "^2.8.2"
+    "yaml": "^2.8.3"
   },
   "peerDependencies": {
     "jest": ">=29.0.0"
