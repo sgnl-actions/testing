@@ -43,5 +43,8 @@
   },
   "devDependencies": {
     "jest": "^30.0.5"
+  },
+  "overrides": {
+    "serialize-javascript": ">=7.0.5"
   }
 }
