@@ -45,18 +45,14 @@ export function setupNock(steps) {
       : scope[method](path);
 
     if (networkError) {
-      interceptor.replyWithError('Network error: connection refused').persist();
+      interceptor.replyWithError('Network error: connection refused');
       scopes.push(scope);
     } else if (fixtureData) {
-      // Persist error responses so SDK retries see the same error
-      const reply = interceptor.reply(
+      interceptor.reply(
         fixtureData.statusCode,
         fixtureData.body,
         fixtureData.headers
       );
-      if (fixtureData.statusCode >= 400) {
-        reply.persist();
-      }
       scopes.push(scope);
     } else {
       throw new Error(`Step for ${request.method} ${request.url} has no fixtureData or networkError`);
