@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.mjs",
   "bin": {
-    "sgnl-test-init": "./src/cli/init.mjs"
+    "sgnl-test-init": "./src/cli/init.mjs",
+    "sgnl-sandbox-test": "./src/cli/sandbox-test.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",
@@ -33,8 +34,9 @@
   "author": "SGNL Engineering",
   "license": "MIT",
   "dependencies": {
+    "@sgnl-actions/action-sandbox": "github:sgnl-actions/action-sandbox#v1.0.0",
     "js-yaml": "^4.1.0",
-    "ldapts": "^8.1.7",
+    "ldapts": "^4.2.6",
     "nock": "^14.0.0",
     "yaml": "^2.8.3"
   },
