@@ -47,6 +47,7 @@
     "jest": "^30.0.5"
   },
   "overrides": {
-    "serialize-javascript": ">=7.0.5"
+    "serialize-javascript": ">=7.0.5",
+    "@mswjs/interceptors": ">=0.41.0"
   }
 }
