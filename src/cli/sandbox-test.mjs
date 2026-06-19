@@ -14,7 +14,7 @@
  *   --scenarios, -s Path to scenarios YAML (default: tests/scenarios.yaml)
  *   --timeout, -t   Timeout per scenario in ms (default: 15000)
  *   --verbose, -v   Show action stderr output
- *   --common        Include auto-generated common error scenarios
+ *   --no-common     Exclude auto-generated common error scenarios
  *   --help, -h      Show help
  */
 
@@ -52,7 +52,7 @@ Options:
   --scenarios, -s Path to scenarios YAML (default: tests/scenarios.yaml)
   --timeout, -t   Timeout per scenario in ms (default: 15000)
   --verbose, -v   Show action stderr output
-  --common        Include auto-generated common error scenarios (off by default)
+  --no-common     Exclude auto-generated common error scenarios (included by default)
   --help, -h      Show help`);
   process.exit(0);
 }
@@ -61,7 +61,7 @@ const bundlePath = resolve(getArg(['--bundle', '-b']) || 'dist/index.js');
 const scenariosPath = resolve(getArg(['--scenarios', '-s']) || 'tests/scenarios.yaml');
 const timeout = parseInt(getArg(['--timeout', '-t']) || '15000', 10);
 const verbose = hasFlag(['--verbose', '-v']);
-const includeCommon = hasFlag(['--common']);
+const includeCommon = !hasFlag(['--no-common']);
 
 // --- Graceful skip if files don't exist ---
 if (!existsSync(bundlePath)) {
