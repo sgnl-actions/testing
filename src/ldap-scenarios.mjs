@@ -4,6 +4,121 @@ import { readFileSync } from 'fs';
 import { parse } from 'yaml';
 import { resolve, dirname } from 'path';
 
+// ─── Shared mock functions (created at module scope) ───
+const mockBind = jest.fn();
+const mockUnbind = jest.fn();
+const mockModify = jest.fn();
+const mockSearch = jest.fn();
+const mockAdd = jest.fn();
+const mockDelete = jest.fn();
+const mockModifyDN = jest.fn();
+const mockCompare = jest.fn();
+
+/**
+ * ldapts mock factory. Call jest.unstable_mockModule('ldapts', ldaptsMock)
+ * at the TOP of your test file (before any imports that use ldapts).
+ */
+export const ldaptsMock = () => ({
+  Client: jest.fn().mockImplementation(() => ({
+    bind: mockBind,
+    unbind: mockUnbind,
+    modify: mockModify,
+    search: mockSearch,
+    add: mockAdd,
+    delete: mockDelete,
+    modifyDN: mockModifyDN,
+    compare: mockCompare,
+    connect: jest.fn().mockResolvedValue(),
+    disconnect: jest.fn().mockResolvedValue(),
+    startTLS: jest.fn().mockResolvedValue()
+  })),
+  Change: jest.fn().mockImplementation((opts) => ({
+    operation: opts.operation,
+    modification: opts.modification
+  })),
+  Attribute: jest.fn().mockImplementation((opts) => ({
+    type: opts.type,
+    values: opts.values
+  })),
+  EqualityFilter: jest.fn().mockImplementation((opts) => ({
+    attribute: opts.attribute,
+    value: opts.value,
+    toString: () => `(${opts.attribute}=${opts.value})`
+  })),
+  AndFilter: jest.fn().mockImplementation((opts) => ({
+    filters: opts.filters || [],
+    toString: () => `(&${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
+  })),
+  OrFilter: jest.fn().mockImplementation((opts) => ({
+    filters: opts.filters || [],
+    toString: () => `(|${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
+  })),
+  NotFilter: jest.fn().mockImplementation((opts) => ({
+    filter: opts.filter,
+    toString: () => `(!${opts.filter?.toString ? opts.filter.toString() : opts.filter})`
+  })),
+  PresenceFilter: jest.fn().mockImplementation((opts) => ({
+    attribute: opts.attribute,
+    toString: () => `(${opts.attribute}=*)`
+  })),
+  SubstringFilter: jest.fn().mockImplementation((opts) => ({
+    attribute: opts.attribute,
+    initial: opts.initial,
+    any: opts.any,
+    final: opts.final,
+    toString: () => `(${opts.attribute}=*substring*)`
+  })),
+  GreaterThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
+    attribute: opts.attribute,
+    value: opts.value,
+    toString: () => `(${opts.attribute}>=${opts.value})`
+  })),
+  LessThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
+    attribute: opts.attribute,
+    value: opts.value,
+    toString: () => `(${opts.attribute}<=${opts.value})`
+  })),
+  ApproximateFilter: jest.fn().mockImplementation((opts) => ({
+    attribute: opts.attribute,
+    value: opts.value,
+    toString: () => `(${opts.attribute}~=${opts.value})`
+  })),
+  ExtensibleFilter: jest.fn().mockImplementation((opts) => opts),
+  DN: jest.fn().mockImplementation((dn) => ({
+    toString: () => dn || ''
+  })),
+  Filter: jest.fn().mockImplementation((opts) => opts),
+  ResultCodeError: jest.fn(),
+  NoSuchObjectError: jest.fn(),
+  InvalidCredentialsError: jest.fn(),
+  InsufficientAccessError: jest.fn(),
+  NoSuchAttributeError: jest.fn(),
+  ConstraintViolationError: jest.fn(),
+  AlreadyExistsError: jest.fn(),
+  UnwillingToPerformError: jest.fn(),
+  SizeLimitExceededError: jest.fn(),
+  TimeLimitExceededError: jest.fn(),
+  InvalidSyntaxError: jest.fn(),
+  OperationsError: jest.fn(),
+  ProtocolError: jest.fn(),
+  BusyError: jest.fn(),
+  UnavailableError: jest.fn(),
+  SearchEntry: jest.fn(),
+  SearchResponse: jest.fn(),
+  ModifyRequest: jest.fn(),
+  ModifyResponse: jest.fn(),
+  AddRequest: jest.fn(),
+  AddResponse: jest.fn(),
+  DeleteRequest: jest.fn(),
+  DeleteResponse: jest.fn(),
+  BindRequest: jest.fn(),
+  BindResponse: jest.fn()
+});
+
+// Register the mock at module scope — this ensures it's established before
+// any test file's beforeAll/import() calls resolve.
+jest.unstable_mockModule('ldapts', ldaptsMock);
+
 /**
  * Parse LDAP scenarios from YAML file (separate from HTTP scenarios parsing)
  */
@@ -87,123 +202,6 @@ export function runLDAPScenarios(options) {
     includeCommon = true,
     callerDir
   } = options;
-
-  // Create mock functions first
-  const mockBind = jest.fn();
-  const mockUnbind = jest.fn();
-  const mockModify = jest.fn();
-  const mockSearch = jest.fn();
-  const mockAdd = jest.fn();
-  const mockDelete = jest.fn();
-  const mockModifyDN = jest.fn();
-  const mockCompare = jest.fn();
-
-  // Mock ldapts module IMMEDIATELY - before any other operations
-  jest.unstable_mockModule('ldapts', () => ({
-    Client: jest.fn().mockImplementation(() => ({
-      bind: mockBind,
-      unbind: mockUnbind,
-      modify: mockModify,
-      search: mockSearch,
-      add: mockAdd,
-      delete: mockDelete,
-      modifyDN: mockModifyDN,
-      compare: mockCompare,
-      // Ensure no real connections are made by overriding any connection methods
-      connect: jest.fn().mockResolvedValue(),
-      disconnect: jest.fn().mockResolvedValue(),
-      startTLS: jest.fn().mockResolvedValue()
-    })),
-    Change: jest.fn().mockImplementation((opts) => ({
-      operation: opts.operation,
-      modification: opts.modification
-    })),
-    Attribute: jest.fn().mockImplementation((opts) => ({
-      type: opts.type,
-      values: opts.values
-    })),
-
-    // Filter classes - essential for complex LDAP queries like objectGUID searches
-    EqualityFilter: jest.fn().mockImplementation((opts) => ({
-      attribute: opts.attribute,
-      value: opts.value,
-      toString: () => `(${opts.attribute}=${opts.value})`
-    })),
-    AndFilter: jest.fn().mockImplementation((opts) => ({
-      filters: opts.filters || [],
-      toString: () => `(&${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
-    })),
-    OrFilter: jest.fn().mockImplementation((opts) => ({
-      filters: opts.filters || [],
-      toString: () => `(|${(opts.filters || []).map(f => f.toString ? f.toString() : f).join('')})`
-    })),
-    NotFilter: jest.fn().mockImplementation((opts) => ({
-      filter: opts.filter,
-      toString: () => `(!${opts.filter?.toString ? opts.filter.toString() : opts.filter})`
-    })),
-    PresenceFilter: jest.fn().mockImplementation((opts) => ({
-      attribute: opts.attribute,
-      toString: () => `(${opts.attribute}=*)`
-    })),
-    SubstringFilter: jest.fn().mockImplementation((opts) => ({
-      attribute: opts.attribute,
-      initial: opts.initial,
-      any: opts.any,
-      final: opts.final,
-      toString: () => `(${opts.attribute}=*substring*)`
-    })),
-    GreaterThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
-      attribute: opts.attribute,
-      value: opts.value,
-      toString: () => `(${opts.attribute}>=${opts.value})`
-    })),
-    LessThanEqualsFilter: jest.fn().mockImplementation((opts) => ({
-      attribute: opts.attribute,
-      value: opts.value,
-      toString: () => `(${opts.attribute}<=${opts.value})`
-    })),
-    ApproximateFilter: jest.fn().mockImplementation((opts) => ({
-      attribute: opts.attribute,
-      value: opts.value,
-      toString: () => `(${opts.attribute}~=${opts.value})`
-    })),
-    ExtensibleFilter: jest.fn().mockImplementation((opts) => opts),
-
-    // Other commonly used classes
-    DN: jest.fn().mockImplementation((dn) => ({
-      toString: () => dn || ''
-    })),
-    Filter: jest.fn().mockImplementation((opts) => opts),
-
-    // Common LDAP error classes
-    ResultCodeError: jest.fn(),
-    NoSuchObjectError: jest.fn(),
-    InvalidCredentialsError: jest.fn(),
-    InsufficientAccessError: jest.fn(),
-    NoSuchAttributeError: jest.fn(),
-    ConstraintViolationError: jest.fn(),
-    AlreadyExistsError: jest.fn(),
-    UnwillingToPerformError: jest.fn(),
-    SizeLimitExceededError: jest.fn(),
-    TimeLimitExceededError: jest.fn(),
-    InvalidSyntaxError: jest.fn(),
-    OperationsError: jest.fn(),
-    ProtocolError: jest.fn(),
-    BusyError: jest.fn(),
-    UnavailableError: jest.fn(),
-
-    // Request/Response classes
-    SearchEntry: jest.fn(),
-    SearchResponse: jest.fn(),
-    ModifyRequest: jest.fn(),
-    ModifyResponse: jest.fn(),
-    AddRequest: jest.fn(),
-    AddResponse: jest.fn(),
-    DeleteRequest: jest.fn(),
-    DeleteResponse: jest.fn(),
-    BindRequest: jest.fn(),
-    BindResponse: jest.fn()
-  }));
 
   // Resolve the caller directory for relative paths
   const baseDir = callerDir || process.cwd();
