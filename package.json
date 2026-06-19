@@ -34,7 +34,7 @@
   "author": "SGNL Engineering",
   "license": "MIT",
   "dependencies": {
-    "@sgnl-actions/action-sandbox": "github:sgnl-actions/action-sandbox#v1.0.0",
+    "@sgnl-actions/action-sandbox": "github:sgnl-actions/action-sandbox#a7fb8363ffb2bcd94e032f2d0649508fb1f16fc9",
     "js-yaml": "^4.1.0",
     "ldapts": "^4.2.6",
     "nock": "^14.0.0",
