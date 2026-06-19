@@ -385,6 +385,10 @@ export function runLDAPScenarios(options) {
           if (!scenario.invoke.throws) {
             throw error;
           }
+          // Re-throw Jest assertion errors (e.g. toThrow mismatch)
+          if (error.matcherResult || error.name === 'JestAssertionError') {
+            throw error;
+          }
         }
       });
     }
