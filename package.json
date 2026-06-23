@@ -34,7 +34,7 @@
   "author": "SGNL Engineering",
   "license": "MIT",
   "dependencies": {
-    "@sgnl-actions/action-sandbox": "github:sgnl-actions/action-sandbox#v1.0.0",
+    "@sgnl-actions/action-sandbox": "github:sgnl-actions/action-sandbox#v1.1.0",
     "js-yaml": "^4.1.0",
     "ldapts": "^4.2.6",
     "nock": "^14.0.0",
@@ -47,6 +47,7 @@
     "jest": "^30.0.5"
   },
   "overrides": {
-    "serialize-javascript": ">=7.0.5"
+    "serialize-javascript": ">=7.0.5",
+    "@mswjs/interceptors": ">=0.41.0"
   }
 }
